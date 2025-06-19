@@ -1477,8 +1477,18 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
     <td colspan='2' style='width:40%'>조건 충족 여부(○, X 중 선택)</td>
   </tr>
 """
-        )
-        max_reqs = max(3, len(req_items))
+    )
+
+    # Sub-header row for requirement section
+    html += (
+        "<tr>"
+        "<td colspan='3' class='normal' style='font-weight:bold'>충족조건</td>"
+        "<td colspan='2' class='normal' style='font-weight:bold'>조건 충족 여부(○, X 중 선택)</td>"
+        "</tr>"
+    )
+
+    req_items = sorted(requirements.items())
+    max_reqs = max(3, len(req_items))
         for idx in range(max_reqs):
             if idx < len(req_items):
                 rk, text = req_items[idx]
