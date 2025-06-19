@@ -1434,15 +1434,16 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         (0, 0),
         (3, 0), (3, 1), (3, 2), (3, 3), (3, 4),
         # 4. 충족조건 헤더(행 5)
-        (5, 0), (5, 4),
+        (5, 0), (5, 1),
         # 5. 필요서류 헤더(행 11)
         (11, 0), (11, 1), (11, 2), (11, 3), (11, 4),
     ]
 
     req_items = sorted(requirements.items())
     max_reqs = max(3, len(req_items))
-    extra_reqs = max(0, max_reqs - 4)
-
+    # 템플릿에는 기본적으로 5개의 충족조건 행이 준비되어 있다.
+    extra_reqs = max(0, max_reqs - 5)
+    
     doc_start = 12 + extra_reqs
 
     for r, c in header_cells:
@@ -1472,20 +1473,18 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         set_cell_font(cell, 11)
         
     # 4. 충족조건 헤더 설정
-    # 템플릿의 행 5를 사용하여 "4. 충족조건"과 "조건 충족 여부(○, X 중 선택)"를 표시
+    # 템플릿의 행 5를 사용하여 "4. 충족조건"(왼쪽 3칸 병합)과
+    # "조건 충족 여부(○, X 중 선택)"(오른쪽 2칸 병합)을 표시한다.
     sub_row = table.rows[5]
     sub_row.cells[0].text = "4. 충족조건"
-    set_cell_font(sub_row.cells[0], 11, bold=True)
-    for c in [1, 2, 3]:
-        sub_row.cells[c].text = ""
-        set_cell_font(sub_row.cells[c], 11)
-    sub_row.cells[4].text = "조건 충족 여부(○, X 중 선택)"
-    set_cell_font(sub_row.cells[4], 11, bold=True)
+    set_cell_font(sub_row.cells[0], 12, bold=True)
+    sub_row.cells[1].text = "조건 충족 여부(○, X 중 선택)"
+    set_cell_font(sub_row.cells[1], 12, bold=True)
 
     # 4. 충족조건 내용 채우기 (rows 6-10 default)
     req_items = list(requirements.items())
     max_reqs = max(3, len(req_items))
-    extra_reqs = max(0, max_reqs - 4)
+    extra_reqs = max(0, max_reqs - 5)
     for i in range(extra_reqs):
         new_row = clone_row(table, 10 + i)
         for cell in new_row.cells:
@@ -1652,7 +1651,10 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
     <td colspan='2' class='normal' style='width:45%'>{result["title_text"]}</td>
     <td colspan='3' class='normal' style='width:55%'>{result["output_1_tag"]}</td>
   </tr>
-  <tr><td colspan='3' class='normal' style='width:60%;font-weight:bold'>4. 충족조건</td><td colspan='2' class='normal' style='width:40%;font-weight:bold'>조건 충족 여부(○, X 중 선택)</td></tr>
+  <tr>
+    <td class='title' colspan='3' style='width:60%'>4. 충족조건</td>
+    <td class='title' colspan='2' style='width:40%'>조건 충족 여부(○, X 중 선택)</td>
+  </tr>  
 """
         )
 
