@@ -1483,23 +1483,25 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
     html += (
         "<tr>"
         "<td colspan='3' class='normal' style='font-weight:bold'>충족조건</td>"
-        "<td colspan='2' class='normal' style='font-weight:bold'>조건 충족 여부(○, X 중 선택)</td>"
+        "<td colspan='2' class='normal' style='font-weight:bold'>"
+        "조건 충족 여부(○, X 중 선택)"
+        "</td>"        
         "</tr>"
     )
 
     req_items = sorted(requirements.items())
     max_reqs = max(3, len(req_items))
-        for idx in range(max_reqs):
-            if idx < len(req_items):
-                rk, text = req_items[idx]
-                symbol = requirement_symbol(current_key, rk, selections)
-            else:
-                text = ""
-                symbol = ""
-            html += (
-                f"<tr><td colspan='3' class='normal' style='text-align:left'>{text}</td>"
-                f"<td colspan='2' class='normal'>{symbol}</td></tr>"
-            )
+    for idx in range(max_reqs):
+        if idx < len(req_items):
+            rk, text = req_items[idx]
+            symbol = requirement_symbol(current_key, rk, selections)
+        else:
+            text = ""
+            symbol = ""
+        html += (
+            f"<tr><td colspan='3' class='normal' style='text-align:left'>{text}</td>"
+            f"<td colspan='2' class='normal'>{symbol}</td></tr>"
+        )
 
     html += textwrap.dedent(
         """
@@ -1585,18 +1587,23 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         
     req_items = list(requirements.items())
     if req_items:
-        # 4. 충족조건 헤더 및 소제목 설정
+        # 4. 충족조건 제목 및 소제목 설정
+        # ── 4-A.  머릿셀 (템플릿 row 5, 12 pt Bold) ─────────────────────
         header_row = table.rows[5]
         header_row.cells[0].text = "4. 충족조건"
         set_cell_font(header_row.cells[0], 12, bold=True)
-        header_row.cells[4].text = "조건 충족 여부(○, X 중 선택)"
-        set_cell_font(header_row.cells[4], 12, bold=True)
 
+        # ── 4-B.  소제목 행 (템플릿 row 6, 11 pt Bold) ──────────────────
+        #   row 6 구조 : [ col0-2 병합셀 ] │ [ col3-4 병합셀 ]
         sub_row = table.rows[6]
+
+        # ① 왼쪽 병합셀 (시작 열 0)
         sub_row.cells[0].text = "충족조건"
         set_cell_font(sub_row.cells[0], 11, bold=True)
-        sub_row.cells[4].text = "조건 충족 여부(○, X 중 선택)"
-        set_cell_font(sub_row.cells[4], 11, bold=True)
+
+        # ② 오른쪽 병합셀 (‼ 시작 열은 3, 열 4 X)
+        sub_row.cells[3].text = "조건 충족 여부(○, X 중 선택)"
+        set_cell_font(sub_row.cells[3], 11, bold=True)
 
         # 4. 충족조건 내용 채우기 (rows 7-11 default)
         max_reqs = max(3, len(req_items))
