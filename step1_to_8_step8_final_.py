@@ -1467,8 +1467,14 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
   </tr>
   """
     )
+    if isinstance(requirements, dict):
+        req_items = [
+            (requirements[k], requirement_symbol(current_key, k, selections))
+            for k in sorted(requirements.keys())
+        ]
+    else:
+        req_items = list(zip(requirements, selections))
 
-    req_items = sorted(requirements.items())
     if req_items:
         html += textwrap.dedent(
             """
@@ -1489,12 +1495,11 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
         "</tr>"
     )
 
-    req_items = sorted(requirements.items())
     max_reqs = max(3, len(req_items))
     for idx in range(max_reqs):
         if idx < len(req_items):
-            rk, text = req_items[idx]
-            symbol = requirement_symbol(current_key, rk, selections)
+            text, symbol = req_items[idx]
+
         else:
             text = ""
             symbol = ""
@@ -1531,16 +1536,28 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     table = doc.tables[0]
 
     start_row = 6  # row index where conditions begin
-    for idx, (key, cond_text) in enumerate(requirements.items()):
-        if start_row + idx >= len(table.rows):
-            break
-        row = table.rows[start_row + idx]
-        row.cells[0].text = cond_text
-        value = selections.get(f"{current_key}_req_{key}", "")
-        symbol = "○" if value == "충족" else "X" if value == "미충족" else ""
-        row.cells[3].text = symbol
-        set_cell_font(row.cells[0], 11)
-        set_cell_font(row.cells[3], 11)
+    if isinstance(requirements, dict):
+        req_texts = [requirements[k] for k in sorted(requirements.keys())]
+        symbols = [
+            "○" if selections.get(f"{current_key}_req_{k}") == "충족" else
+            "X" if selections.get(f"{current_key}_req_{k}") == "미충족" else ""
+            for k in sorted(requirements.keys())
+        ]
+    else:
+        req_texts = list(requirements)
+        symbols = list(selections)
+
+    if req_texts and symbols:
+        for idx, (cond_text, symbol) in enumerate(zip(req_texts, symbols)):
+            if start_row + idx >= len(table.rows):
+                break
+            row = table.rows[start_row + idx]
+            row.cells[0].text = cond_text
+            row.cells[3].text = symbol
+            set_cell_font(row.cells[0], 11)
+            set_cell_font(row.cells[3], 11)
+    else:
+        print("⚠️ 충족조건이 비어 있음 - step6 데이터가 연결되지 않았을 수 있음")
 
     # Ensure header cells use 12pt font
     header_cells = [
@@ -1552,7 +1569,14 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         (11, 0), (11, 1), (11, 2), (11, 3), (11, 4),
     ]
 
-    req_items = sorted(requirements.items())
+    if isinstance(requirements, dict):
+        req_items = [
+            (requirements[k], requirement_symbol(current_key, k, selections))
+            for k in sorted(requirements.keys())
+        ]
+    else:
+        req_items = list(zip(requirements, selections))
+    
     max_reqs = max(3, len(req_items))
     # 템플릿에는 기본적으로 5개의 충족조건 행이 준비되어 있다.
     extra_reqs = max(0, max_reqs - 4)
@@ -1585,7 +1609,14 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         cell.text = apply_text
         set_cell_font(cell, 11)
         
-    req_items = list(requirements.items())
+    if isinstance(requirements, dict):
+        req_items = [
+            (requirements[k], requirement_symbol(current_key, k, selections))
+            for k in sorted(requirements.keys())
+        ]
+    else:
+        req_items = list(zip(requirements, selections))
+    
     if req_items:
         # 4. 충족조건 제목 및 소제목 설정
         # ── 4-A.  머릿셀 (템플릿 row 5, 12 pt Bold) ─────────────────────
@@ -1615,8 +1646,8 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         for i in range(max_reqs):
             row = 7 + i
             if i < len(req_items):
-                rk, text = req_items[i]
-                symbol = requirement_symbol(current_key, rk, selections)
+                text, symbol = req_items[i]
+
             else:
                 text = ""
                 symbol = ""
@@ -1707,20 +1738,20 @@ if st.session_state.step == 8:
         )
     else:
         result = step7_results[current_key][current_idx]
-        requirements = {}
-        if not (result.get("output_1_tag") or "").strip() and not (result.get("output_2_text") or "").strip():
-            st.write(
-                "해당 변경사항에 대한 충족조건을 고려하였을 때,\n"
-                "「의약품 허가 후 제조방법 변경관리 가이드라인」에서 제시하고 있는\n"
-                "범위에 해당하지 않는 것으로 확인됩니다."
-            )
-        else:
-            requirements = step6_items.get(current_key, {}).get("requirements", {})
+        requirements = result.get("requirements", [])
+        selections = result.get("selections", [])
 
-        selections = {
-            f"{current_key}_req_{rk}": step6_selections.get(f"{current_key}_req_{rk}", "")
-            for rk in requirements
-        }
+        if not requirements or not selections:
+            requirements = []
+            selections = []
+            for key in step6_items.get(current_key, {}).get("requirements", {}):
+                req_text = step6_items[current_key]["requirements"][key]
+                sel_key = f"{current_key}_req_{key}"
+                sel_value = step6_selections.get(sel_key)
+                if sel_value in ["○", "X", "충족", "미충족"]:
+                    requirements.append(f"{key}. {req_text}")
+                    selections.append("○" if sel_value in ["○", "충족"] else "X")
+
         output2_text_list = [line.strip() for line in result.get("output_2_text", "").split("\n") if line.strip()]
         if output2_text_list and "필요서류" in output2_text_list[0]:
             output2_text_list = output2_text_list[1:]
@@ -1730,9 +1761,9 @@ if st.session_state.step == 8:
             st.markdown("### 4. 충족조건 및 충족 여부")
             table_html = "<table>"
             table_html += "<tr><th>충족조건</th><th>충족 여부</th></tr>"
-            for rk, text in sorted(requirements.items()):
-                symbol = requirement_symbol(current_key, rk, selections)
-                table_html += f"<tr><td>{text}</td><td>{symbol}</td></tr>"
+            for req, sel in zip(requirements, selections):
+                table_html += f"<tr><td>{req}</td><td>{sel}</td></tr>"
+                
             table_html += "</table>"
             st.markdown(table_html, unsafe_allow_html=True)
         
