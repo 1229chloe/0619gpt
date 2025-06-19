@@ -1479,11 +1479,11 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
         html += textwrap.dedent(
             """
   <tr class='title'>
-    <td colspan='3' style='width:60%'>4. 충족조건</td>
-    <td colspan='2' style='width:40%'>조건 충족 여부(○, X 중 선택)</td>
+    <td colspan='3'>4. 충족조건</td>
+    <td colspan='2'>조건 충족 여부(○, X 중 선택)</td>
   </tr>
 """
-    )
+        )
 
     # Sub-header row for requirement section
     html += (
@@ -1535,6 +1535,8 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     doc = Document('제조방법변경 신청양식_empty_.docx')
     table = doc.tables[0]
 
+    extra_reqs = 0
+
     
     start_row = 6  # row index where conditions begin
     if isinstance(requirements, dict):
@@ -1561,13 +1563,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         print("⚠️ 충족조건이 비어 있음 - step6 데이터가 연결되지 않았을 수 있음")
 
 
-    doc_start = 12 + extra_reqs
-
-    for r, c in header_cells:
-        r_idx = r
-        if r >= 11:
-            r_idx += extra_reqs
-        set_cell_font(table.cell(r_idx, c), 12)
+    # header styling adjusted after requirements are processed
         
 
     # 1. 신청인: template rows 0-2, columns 2-4 hold the value area
@@ -1637,12 +1633,19 @@ def create_application_docx(current_key, result, requirements, selections, outpu
             set_cell_font(table.cell(row, 4), 11)
     else:
         # Clear template requirement section when no requirements are present
+        extra_reqs = 0
         for ridx in range(5, 12):
             for cell in table.rows[ridx].cells:
                 cell.text = ""
                 set_cell_font(cell, 11)
 
     # 5. 필요서류: rows 12-18 available
+    doc_start = 12 + extra_reqs
+    for r, c in header_cells:
+        r_idx = r
+        if r >= 11:
+            r_idx += extra_reqs
+        set_cell_font(table.cell(r_idx, c), 12)    
     doc_start = 12 + extra_reqs
     max_docs = max(3, len(output2_text_list))
     extra_docs = max(0, max_docs - 7)
