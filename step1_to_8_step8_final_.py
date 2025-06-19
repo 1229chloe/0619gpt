@@ -1,6 +1,6 @@
 import streamlit as st
 from docx import Document
-from docx.shared import Pt
+from docx.shared import Pt, Cm
 from copy import deepcopy
 from tempfile import NamedTemporaryFile
 import os
@@ -1424,6 +1424,89 @@ def requirement_symbol(title_key, req_key, selections):
         return "×"
     return ""
     
+
+def create_application_html(current_key, result, requirements, selections, output2_text_list):
+    """Generate HTML table for the application form."""
+    html = textwrap.dedent(
+        f"""
+<style>
+table.app {{ border-collapse: collapse; width:100%; font-family: 'Nanum Gothic', sans-serif; }}
+td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align: middle; }}
+.title {{ font-weight: bold; font-size: 12pt; }}
+.normal {{ font-size: 11pt; }}
+</style>
+<table class='app' style='width:100%; border-collapse:collapse;'>
+  <colgroup>
+    <col style="width:23%;">
+    <col style="width:22%;">
+    <col style="width:15%;">
+    <col style="width:17%;">
+    <col style="width:23%;">
+  </colgroup>
+  <tr>
+    <td class='title' rowspan='3' style='width:23%'>1. 신청인</td>
+    <td class='normal' style='width:22%'>성명</td>
+    <td colspan='3' style='width:55%'></td>
+  </tr>
+  <tr>
+    <td class='normal' style='width:22%'>제조소(영업소) 명칭</td>
+    <td colspan='3' style='width:55%'></td>
+  </tr>
+  <tr>
+    <td class='normal' style='width:22%'>변경신청 제품명</td>
+    <td colspan='3' style='width:55%'></td>
+  </tr>
+  <tr>
+    <td class='title' colspan='2' style='width:45%'>2. 변경유형</td>
+    <td class='title' colspan='3' style='width:55%'>3. 신청 유형(AR, IR, Cmin, Cmaj 중 선택)</td>
+  </tr>
+  <tr>
+    <td colspan='2' class='normal' style='width:45%'>{result["title_text"]}</td>
+    <td colspan='3' class='normal' style='width:55%'>{result["output_1_tag"]}</td>
+  </tr>
+  <tr class='title'>
+    <td colspan='3' style='width:60%'>4. 충족조건</td>
+    <td colspan='2' style='width:40%'>조건 충족 여부(○, X 중 선택)</td>
+  </tr>
+"""
+    )
+
+    req_items = sorted(requirements.items())
+    max_reqs = max(3, len(req_items))
+    for idx in range(max_reqs):
+        if idx < len(req_items):
+            rk, text = req_items[idx]
+            symbol = requirement_symbol(current_key, rk, selections)
+        else:
+            text = ""
+            symbol = ""
+        html += (
+            f"<tr><td colspan='3' class='normal' style='text-align:left'>{text}</td>"
+            f"<td colspan='2' class='normal'>{symbol}</td></tr>"
+        )
+
+    html += textwrap.dedent(
+        """
+  <tr>
+    <td class='title' colspan='3'>5. 필요서류 (해당하는 필요서류 기재)</td>
+    <td class='title'>구비 여부<br>(○, X 중 선택)</td>
+    <td class='title'>해당 페이지 표시</td>
+  </tr>
+"""
+    )
+    max_docs = max(3, len(output2_text_list))
+    for i in range(max_docs):
+        line = output2_text_list[i] if i < len(output2_text_list) else ""
+        html += (
+            f"<tr>"
+            f"<td colspan='3' class='normal' style='text-align:left'>{line}</td>"
+            f"<td class='normal'></td>"
+            f"<td class='normal'></td>"
+            f"</tr>"
+        )
+    html += "</table>"
+    return html
+    
 def create_application_docx(current_key, result, requirements, selections, output2_text_list, file_path):
     # Load template to preserve all styles and merges
     doc = Document('제조방법변경 신청양식_empty_.docx')
@@ -1525,6 +1608,12 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         cell.text = ""
         set_cell_font(cell, 11)
 
+    # 열 폭 일괄 조정
+    col_widths = [Cm(4.1), Cm(4.0), Cm(2.6), Cm(3.1), Cm(4.1)]
+    for i, w in enumerate(col_widths):
+        for row in table.rows:
+            row.cells[i].width = w
+    
     doc.save(file_path)
     return file_path
 
@@ -1621,78 +1710,14 @@ if st.session_state.step == 8:
             unsafe_allow_html=True,
         )
         
-        html = textwrap.dedent(
-            f"""
-<style>
-table {{ border-collapse: collapse; width: 100%; font-family: 'Nanum Gothic', sans-serif; }}
-td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align: middle; }}
-.title {{ font-weight: bold; font-size: 12pt; }}
-.normal {{ font-size: 11pt; }}
-</style>
-<table>
-  <tr>
-    <td class='title' rowspan='3' style='width:23%'>1. 신청인</td>
-    <td class='normal' style='width:22%'>성명</td>
-    <td colspan='3' style='width:55%'></td>
-  </tr>
-  <tr>
-    <td class='normal' style='width:22%'>제조소(영업소) 명칭</td>
-    <td colspan='3' style='width:55%'></td>
-  </tr>
-  <tr>
-    <td class='normal' style='width:22%'>변경신청 제품명</td>
-    <td colspan='3' style='width:55%'></td>
-  </tr>
-  <tr>
-    <td class='title' colspan='2' style='width:45%'>2. 변경유형</td>
-    <td class='title' colspan='3' style='width:55%'>3. 신청 유형(AR, IR, Cmin, Cmaj 중 선택)</td>
-  </tr>
-  <tr>
-    <td colspan='2' class='normal' style='width:45%'>{result["title_text"]}</td>
-    <td colspan='3' class='normal' style='width:55%'>{result["output_1_tag"]}</td>
-  </tr>
-  <tr>
-    <td class='title' colspan='3' style='width:60%'>4. 충족조건</td>
-    <td class='title' colspan='2' style='width:40%'>조건 충족 여부(○, X 중 선택)</td>
-  </tr>  
-"""
+        html = create_application_html(
+            current_key,
+            result,
+            requirements,
+            selections,
+            output2_text_list,
         )
-
-        req_items = sorted(requirements.items())
-        max_reqs = max(3, len(req_items))
-        for idx in range(max_reqs):
-            if idx < len(req_items):
-                rk, text = req_items[idx]
-                symbol = requirement_symbol(current_key, rk, selections)
-            else:
-                text = ""
-                symbol = ""
-            html += (
-                f"<tr><td colspan='3' class='normal' style='width:60%;text-align:left'>{text}</td>"
-                f"<td colspan='2' class='normal' style='width:40%'>{symbol}</td></tr>"
-            )
-
-        html += textwrap.dedent(
-            """
-  <tr>
-    <td class='title' colspan='3' style='width:60%'>5. 필요서류 (해당하는 필요서류 기재)</td>
-    <td class='title' style='width:17%'>구비 여부<br>(○, X 중 선택)</td>
-    <td class='title' style='width:23%'>해당 페이지 표시</td>
-  </tr>
-"""
-        )
-    max_docs = max(3, len(output2_text_list))
-    for i in range(max_docs):
-        line = output2_text_list[i] if i < len(output2_text_list) else ""
-        html += (
-            f"<tr>"
-            f"<td colspan='3' class='normal' style='width:60%;text-align:left'>{line}</td>"
-            f"<td class='normal' style='width:17%'></td>"
-            f"<td class='normal' style='width:23%'></td>"
-            f"</tr>"
-        )
-    html += "</table>"
-    st.markdown(html, unsafe_allow_html=True)
+        st.markdown(html, unsafe_allow_html=True)
 
     # Display page number and navigation for all pages
     st.markdown(
