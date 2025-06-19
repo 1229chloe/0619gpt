@@ -1535,6 +1535,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     doc = Document('제조방법변경 신청양식_empty_.docx')
     table = doc.tables[0]
 
+    
     start_row = 6  # row index where conditions begin
     if isinstance(requirements, dict):
         req_texts = [requirements[k] for k in sorted(requirements.keys())]
@@ -1547,7 +1548,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         req_texts = list(requirements)
         symbols = list(selections)
 
-    if req_texts and symbols:
+    if requirements and selections:
         for idx, (cond_text, symbol) in enumerate(zip(req_texts, symbols)):
             if start_row + idx >= len(table.rows):
                 break
@@ -1559,27 +1560,6 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     else:
         print("⚠️ 충족조건이 비어 있음 - step6 데이터가 연결되지 않았을 수 있음")
 
-    # Ensure header cells use 12pt font
-    header_cells = [
-        (0, 0),
-        (3, 0), (3, 1), (3, 2), (3, 3), (3, 4),
-        # 4. 충족조건 헤더(행 5)
-        (5, 0), (5, 4),
-        # 5. 필요서류 헤더(행 11)
-        (11, 0), (11, 1), (11, 2), (11, 3), (11, 4),
-    ]
-
-    if isinstance(requirements, dict):
-        req_items = [
-            (requirements[k], requirement_symbol(current_key, k, selections))
-            for k in sorted(requirements.keys())
-        ]
-    else:
-        req_items = list(zip(requirements, selections))
-    
-    max_reqs = max(3, len(req_items))
-    # 템플릿에는 기본적으로 5개의 충족조건 행이 준비되어 있다.
-    extra_reqs = max(0, max_reqs - 4)
 
     doc_start = 12 + extra_reqs
 
@@ -1741,19 +1721,24 @@ if st.session_state.step == 8:
         requirements = result.get("requirements", [])
         selections = result.get("selections", [])
 
-        # result 내부에 requirements가 없으면 step6에서 직접 재구성
-        if not result.get("requirements") or not result.get("selections"):            
+        # result 내부에 requirements 또는 selections가 비어 있으면 step6 데이터로 재구성
+        if not requirements or not selections:        
             requirements = []
             selections = []
             for key in step6_items.get(current_key, {}).get("requirements", {}):
                 req_text = step6_items[current_key]["requirements"][key]
                 sel_key = f"{current_key}_req_{key}"
                 sel_value = step6_selections.get(sel_key)
-                if sel_value in ["○", "X", "충족", "미충족"]:
-                    requirements.append(f"{key}. {req_text}")
-                    selections.append("○" if sel_value == "충족" else "X")
+                if sel_value in ["○", "충족"]:
+                    symbol = "○"
+                elif sel_value in ["X", "미충족"]:
+                    symbol = "X"
+                else:
+                    continue
+                requirements.append(f"{key}. {req_text}")
+                selections.append(symbol)
             result["requirements"] = requirements
-            result["selections"] = selections                    
+            result["selections"] = selections
 
         output2_text_list = [line.strip() for line in result.get("output_2_text", "").split("\n") if line.strip()]
         if output2_text_list and "필요서류" in output2_text_list[0]:
