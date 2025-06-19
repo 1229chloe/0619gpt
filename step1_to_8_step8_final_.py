@@ -1517,7 +1517,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         (0, 0),
         (3, 0), (3, 1), (3, 2), (3, 3), (3, 4),
         # 4. 충족조건 헤더(행 5)
-        (5, 0), (5, 1),
+        (5, 0), (5, 4),
         # 5. 필요서류 헤더(행 11)
         (11, 0), (11, 1), (11, 2), (11, 3), (11, 4),
     ]
@@ -1525,7 +1525,9 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     req_items = sorted(requirements.items())
     max_reqs = max(3, len(req_items))
     # 템플릿에는 기본적으로 5개의 충족조건 행이 준비되어 있다.
-    extra_reqs = max(0, max_reqs - 5)
+    extra_reqs = max(0, max_reqs - 4)
+
+    doc_start = 12 + extra_reqs
     
     doc_start = 12 + extra_reqs
 
@@ -1555,25 +1557,29 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         cell.text = apply_text
         set_cell_font(cell, 11)
         
-    # 4. 충족조건 헤더 설정
-    # 템플릿의 행 5를 사용하여 "4. 충족조건"(왼쪽 3칸 병합)과
-    # "조건 충족 여부(○, X 중 선택)"(오른쪽 2칸 병합)을 표시한다.
-    sub_row = table.rows[5]
-    sub_row.cells[0].text = "4. 충족조건"
-    set_cell_font(sub_row.cells[0], 12, bold=True)
-    sub_row.cells[1].text = "조건 충족 여부(○, X 중 선택)"
-    set_cell_font(sub_row.cells[1], 12, bold=True)
+    # 4. 충족조건 헤더 및 소제목 설정
+    header_row = table.rows[5]
+    header_row.cells[0].text = "4. 충족조건"
+    set_cell_font(header_row.cells[0], 12, bold=True)
+    header_row.cells[4].text = "조건 충족 여부(○, X 중 선택)"
+    set_cell_font(header_row.cells[4], 12, bold=True)
 
-    # 4. 충족조건 내용 채우기 (rows 6-10 default)
+    sub_row = table.rows[6]
+    sub_row.cells[0].text = "충족조건"
+    set_cell_font(sub_row.cells[0], 11, bold=True)
+    sub_row.cells[4].text = "조건 충족 여부(○, X 중 선택)"
+    set_cell_font(sub_row.cells[4], 11, bold=True)
+
+    # 4. 충족조건 내용 채우기 (rows 7-11 default)
     req_items = list(requirements.items())
     max_reqs = max(3, len(req_items))
-    extra_reqs = max(0, max_reqs - 5)
+    extra_reqs = max(0, max_reqs - 4)
     for i in range(extra_reqs):
-        new_row = clone_row(table, 10 + i)
+        new_row = clone_row(table, 11 + i)
         for cell in new_row.cells:
             set_cell_font(cell, 11)
     for i in range(max_reqs):
-        row = 6 + i
+        row = 7 + i
         if i < len(req_items):
             rk, text = req_items[i]
             symbol = requirement_symbol(current_key, rk, selections)
@@ -1613,7 +1619,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     for i, w in enumerate(col_widths):
         for row in table.rows:
             row.cells[i].width = w
-    
+
     doc.save(file_path)
     return file_path
 
