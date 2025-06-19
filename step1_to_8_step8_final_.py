@@ -603,6 +603,7 @@ step6_items = {
             "24a": "24a. 완제의약품/원료의약품 제조공정에서 하나 이상의 단위 조작 변경(공정 중 관리 및/또는 시험방법 포함)",
             "24b": "24b. 첨가제/반제품 및/또는 완제의약품/원료의약품의 시험방법 변경"
         },
+        "requirements": {}
     }
 }
 
@@ -1464,26 +1465,31 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
     <td colspan='2' class='normal' style='width:45%'>{result["title_text"]}</td>
     <td colspan='3' class='normal' style='width:55%'>{result["output_1_tag"]}</td>
   </tr>
+  """
+    )
+
+    req_items = sorted(requirements.items())
+    if req_items:
+        html += textwrap.dedent(
+            """
   <tr class='title'>
     <td colspan='3' style='width:60%'>4. 충족조건</td>
     <td colspan='2' style='width:40%'>조건 충족 여부(○, X 중 선택)</td>
   </tr>
 """
-    )
-
-    req_items = sorted(requirements.items())
-    max_reqs = max(3, len(req_items))
-    for idx in range(max_reqs):
-        if idx < len(req_items):
-            rk, text = req_items[idx]
-            symbol = requirement_symbol(current_key, rk, selections)
-        else:
-            text = ""
-            symbol = ""
-        html += (
-            f"<tr><td colspan='3' class='normal' style='text-align:left'>{text}</td>"
-            f"<td colspan='2' class='normal'>{symbol}</td></tr>"
         )
+        max_reqs = max(3, len(req_items))
+        for idx in range(max_reqs):
+            if idx < len(req_items):
+                rk, text = req_items[idx]
+                symbol = requirement_symbol(current_key, rk, selections)
+            else:
+                text = ""
+                symbol = ""
+            html += (
+                f"<tr><td colspan='3' class='normal' style='text-align:left'>{text}</td>"
+                f"<td colspan='2' class='normal'>{symbol}</td></tr>"
+            )
 
     html += textwrap.dedent(
         """
@@ -1512,6 +1518,18 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     doc = Document('제조방법변경 신청양식_empty_.docx')
     table = doc.tables[0]
 
+    start_row = 6  # row index where conditions begin
+    for idx, (key, cond_text) in enumerate(requirements.items()):
+        if start_row + idx >= len(table.rows):
+            break
+        row = table.rows[start_row + idx]
+        row.cells[0].text = cond_text
+        value = selections.get(f"{current_key}_req_{key}", "")
+        symbol = "○" if value == "충족" else "X" if value == "미충족" else ""
+        row.cells[3].text = symbol
+        set_cell_font(row.cells[0], 11)
+        set_cell_font(row.cells[3], 11)
+
     # Ensure header cells use 12pt font
     header_cells = [
         (0, 0),
@@ -1527,8 +1545,6 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     # 템플릿에는 기본적으로 5개의 충족조건 행이 준비되어 있다.
     extra_reqs = max(0, max_reqs - 4)
 
-    doc_start = 12 + extra_reqs
-    
     doc_start = 12 + extra_reqs
 
     for r, c in header_cells:
@@ -1557,39 +1573,46 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         cell.text = apply_text
         set_cell_font(cell, 11)
         
-    # 4. 충족조건 헤더 및 소제목 설정
-    header_row = table.rows[5]
-    header_row.cells[0].text = "4. 충족조건"
-    set_cell_font(header_row.cells[0], 12, bold=True)
-    header_row.cells[4].text = "조건 충족 여부(○, X 중 선택)"
-    set_cell_font(header_row.cells[4], 12, bold=True)
-
-    sub_row = table.rows[6]
-    sub_row.cells[0].text = "충족조건"
-    set_cell_font(sub_row.cells[0], 11, bold=True)
-    sub_row.cells[4].text = "조건 충족 여부(○, X 중 선택)"
-    set_cell_font(sub_row.cells[4], 11, bold=True)
-
-    # 4. 충족조건 내용 채우기 (rows 7-11 default)
     req_items = list(requirements.items())
-    max_reqs = max(3, len(req_items))
-    extra_reqs = max(0, max_reqs - 4)
-    for i in range(extra_reqs):
-        new_row = clone_row(table, 11 + i)
-        for cell in new_row.cells:
-            set_cell_font(cell, 11)
-    for i in range(max_reqs):
-        row = 7 + i
-        if i < len(req_items):
-            rk, text = req_items[i]
-            symbol = requirement_symbol(current_key, rk, selections)
-        else:
-            text = ""
-            symbol = ""
-        table.cell(row, 0).text = text
-        set_cell_font(table.cell(row, 0), 11)
-        table.cell(row, 4).text = symbol
-        set_cell_font(table.cell(row, 4), 11)
+    if req_items:
+        # 4. 충족조건 헤더 및 소제목 설정
+        header_row = table.rows[5]
+        header_row.cells[0].text = "4. 충족조건"
+        set_cell_font(header_row.cells[0], 12, bold=True)
+        header_row.cells[4].text = "조건 충족 여부(○, X 중 선택)"
+        set_cell_font(header_row.cells[4], 12, bold=True)
+
+        sub_row = table.rows[6]
+        sub_row.cells[0].text = "충족조건"
+        set_cell_font(sub_row.cells[0], 11, bold=True)
+        sub_row.cells[4].text = "조건 충족 여부(○, X 중 선택)"
+        set_cell_font(sub_row.cells[4], 11, bold=True)
+
+        # 4. 충족조건 내용 채우기 (rows 7-11 default)
+        max_reqs = max(3, len(req_items))
+        extra_reqs = max(0, max_reqs - 4)
+        for i in range(extra_reqs):
+            new_row = clone_row(table, 11 + i)
+            for cell in new_row.cells:
+                set_cell_font(cell, 11)
+        for i in range(max_reqs):
+            row = 7 + i
+            if i < len(req_items):
+                rk, text = req_items[i]
+                symbol = requirement_symbol(current_key, rk, selections)
+            else:
+                text = ""
+                symbol = ""
+            table.cell(row, 0).text = text
+            set_cell_font(table.cell(row, 0), 11)
+            table.cell(row, 4).text = symbol
+            set_cell_font(table.cell(row, 4), 11)
+    else:
+        # Clear template requirement section when no requirements are present
+        for ridx in range(5, 12):
+            for cell in table.rows[ridx].cells:
+                cell.text = ""
+                set_cell_font(cell, 11)
 
     # 5. 필요서류: rows 12-18 available
     doc_start = 12 + extra_reqs
@@ -1684,6 +1707,18 @@ if st.session_state.step == 8:
         output2_text_list = [line.strip() for line in result.get("output_2_text", "").split("\n") if line.strip()]
         if output2_text_list and "필요서류" in output2_text_list[0]:
             output2_text_list = output2_text_list[1:]
+
+        # ----- Display requirements table -----
+        if requirements:
+            st.markdown("### 4. 충족조건 및 충족 여부")
+            table_html = "<table>"
+            table_html += "<tr><th>충족조건</th><th>충족 여부</th></tr>"
+            for rk, text in sorted(requirements.items()):
+                symbol = requirement_symbol(current_key, rk, selections)
+                table_html += f"<tr><td>{text}</td><td>{symbol}</td></tr>"
+            table_html += "</table>"
+            st.markdown(table_html, unsafe_allow_html=True)
+        
         with NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
             file_path = tmp.name
             create_application_docx(
