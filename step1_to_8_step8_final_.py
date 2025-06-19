@@ -1741,7 +1741,8 @@ if st.session_state.step == 8:
         requirements = result.get("requirements", [])
         selections = result.get("selections", [])
 
-        if not requirements or not selections:
+        # result 내부에 requirements가 없으면 step6에서 직접 재구성
+        if not result.get("requirements") or not result.get("selections"):            
             requirements = []
             selections = []
             for key in step6_items.get(current_key, {}).get("requirements", {}):
@@ -1750,7 +1751,9 @@ if st.session_state.step == 8:
                 sel_value = step6_selections.get(sel_key)
                 if sel_value in ["○", "X", "충족", "미충족"]:
                     requirements.append(f"{key}. {req_text}")
-                    selections.append("○" if sel_value in ["○", "충족"] else "X")
+                    selections.append("○" if sel_value == "충족" else "X")
+            result["requirements"] = requirements
+            result["selections"] = selections                    
 
         output2_text_list = [line.strip() for line in result.get("output_2_text", "").split("\n") if line.strip()]
         if output2_text_list and "필요서류" in output2_text_list[0]:
