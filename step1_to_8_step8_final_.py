@@ -1623,11 +1623,6 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     doc.save(file_path)
     return file_path
 
-# Step 8 begins
-if st.session_state.step == 8:
-    step7_results = st.session_state.get("step7_results", {})
-    step6_items = st.session_state.get("step6_items", {})
-    step6_selections = st.session_state.get("step6_selections", {})
 
 # Step 8 begins
 if st.session_state.step == 8:
@@ -1672,6 +1667,7 @@ if st.session_state.step == 8:
         )
     else:
         result = step7_results[current_key][current_idx]
+        requirements = {}
         if not (result.get("output_1_tag") or "").strip() and not (result.get("output_2_text") or "").strip():
             st.write(
                 "해당 변경사항에 대한 충족조건을 고려하였을 때,\n"
