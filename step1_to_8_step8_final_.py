@@ -1482,6 +1482,16 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         cell = table.cell(4, c)
         cell.text = apply_text
         set_cell_font(cell, 11)
+
+    # Row 4 in the template merges columns 0-3 into a single cell and
+    # column 4 is a separate cell. Writing to the merged cell multiple
+    # times can overwrite previous text. Fill each logical cell once.
+    change_cell = table.cell(4, 0)
+    set_cell_text_with_breaks(change_cell, change_text)
+
+    apply_cell = table.cell(4, 4)
+    apply_cell.text = apply_text
+    set_cell_font(apply_cell, 11)
         
     # 4. 충족조건 헤더 설정
     # 템플릿의 행 5를 사용하여 "4. 충족조건"과 "조건 충족 여부(○, X 중 선택)"를 표시
