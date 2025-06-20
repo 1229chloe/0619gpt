@@ -1462,10 +1462,19 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     # 2-3. 변경유형 / 신청유형 (row 4)
     change_text = result["title_text"]
     apply_text = result["output_1_tag"]
+
+    def set_cell_text_with_breaks(cell, text):
+        cell.text = ""
+        p = cell.paragraphs[0]
+        for idx, line in enumerate(text.split("\n")):
+            if idx:
+                p.add_run().add_break()
+            p.add_run(line)
+        set_cell_font(cell, 11)
+
     for c in [0, 1]:
         cell = table.cell(4, c)
-        cell.text = change_text
-        set_cell_font(cell, 11)
+        set_cell_text_with_breaks(cell, change_text)
     for c in [2, 3, 4]:
         cell = table.cell(4, c)
         cell.text = apply_text
@@ -1594,6 +1603,8 @@ if st.session_state.step == 8:
             output2_text_list = [line.strip() for line in result.get("output_2_text", "").split("\n") if line.strip()]
             if output2_text_list and "필요서류" in output2_text_list[0]:
                 output2_text_list = output2_text_list[1:]
+
+            title_html = result["title_text"].replace("\n", "<br>")
             with NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
                 file_path = tmp.name
                 create_application_docx(
