@@ -1698,7 +1698,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     for c in [1, 2, 3]:
         sub_row.cells[c].text = ""
         set_cell_font(sub_row.cells[c], 11)
-    sub_row.cells[4].text = "조건 충족 여부(○, X 중 선택)"
+    set_cell_text_with_breaks(sub_row.cells[4], "조건 충족 여부\n(○, X 중 선택)")
     set_cell_font(sub_row.cells[4], 11, bold=True)
 
     # 4. 충족조건 내용 채우기 (rows 6-10 default)
