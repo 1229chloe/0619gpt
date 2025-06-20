@@ -1658,8 +1658,6 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     max_reqs = max(3, len(req_items))
     extra_reqs = max(0, max_reqs - 4)
 
-    doc_start = 12 + extra_reqs
-
     for r, c in header_cells:
         r_idx = r
         if r >= 11:
