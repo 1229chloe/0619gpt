@@ -126,6 +126,7 @@ def go_to_step5():
     ]
     # reset selections to avoid leftovers when revisiting Step5
     st.session_state.step5_selections = {}
+    st.session_state.step5_page = 0    
     # clear downstream state so Step6 recalculates from fresh data
     st.session_state.step6_targets = []
     st.session_state.step6_selections = {}
@@ -255,6 +256,8 @@ if "step5_selections" not in st.session_state:
     st.session_state.step5_selections = {}
 if "step6_targets" not in st.session_state:
     st.session_state.step6_targets = []
+if "step5_page" not in st.session_state:
+    st.session_state.step5_page = 0
 
 # ===== Step5 항목 정의 (전체 하드코딩) =====
 step5_items = {
@@ -335,28 +338,70 @@ def go_to_step6():
 def go_back_to_step4():
     st.session_state.step = 4
 
+# ===== Step5 페이지 이동 함수 =====
+def go_to_prev_step5_page():
+    if st.session_state.step5_page > 0:
+        st.session_state.step5_page -= 1
+
+def go_to_next_step5_page():
+    if st.session_state.step5_page < len(st.session_state.step5_targets) - 1:
+        st.session_state.step5_page += 1
+
 # ===== Step5 화면 =====
 if st.session_state.step == 5:
-    st.markdown("## Step 5")
-    st.write("Step 5. 선택한 변경항목 중 변경된 사항을 선택하세요.")
+    st.markdown(
+        "<h2 style='font-size:24px;'>허가 후 제조방법 변경사항 선택</h2>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stRadio"] > label p {
+            font-size:16px;
+            margin-top:0;
+            margin-bottom:0;
+        }
+        div[data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {
+            font-size:16px;
+            margin-top:0;
+            margin-bottom:0;
+        }
+        div[data-testid="stMarkdownContainer"] p {
+            margin-top:0;
+            margin-bottom:0;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    for code in st.session_state.step5_targets:
-        if code in step5_items:
-            section = step5_items[code]
-            st.markdown(f"#### {section['title']}")
+    targets = st.session_state.step5_targets
+    if not targets:
+        st.warning("Step4에서 선택된 항목이 없습니다.")
+    else:
+        current_code = targets[st.session_state.step5_page]
+        section = step5_items.get(current_code)
+
+        if section:
+            st.markdown(f"<h4 style='font-size:22px;'>{section['title']}</h4>", unsafe_allow_html=True)
             for num, label in section["items"].items():
-                key = f"{code}_{num}"
-                if code == "ds":
-                    st.markdown(f"**{label}** → 변경 있음 (자동 선택됨)")
+                key = f"{current_code}_{num}"
+                if current_code == "ds":
+                    st.markdown(
+                        f"<p style='font-size:18px;'>{label} → 변경 있음 (자동 선택됨)</p>",
+                        unsafe_allow_html=True,
+                    )
                     st.session_state.step5_selections[key] = "변경 있음"
                 else:
                     radio_key = f"step5_radio_{key}"
                     if radio_key not in st.session_state:
                         st.session_state[radio_key] = None
+                    st.markdown(f"<p style='font-size:18px;'>{label}</p>", unsafe_allow_html=True)
                     st.session_state.step5_selections[key] = st.radio(
-                        label,
+                        "",
                         ["변경 있음", "변경 없음"],
-                        key=radio_key
+                        key=radio_key,
+                        label_visibility="collapsed",
                     )
 
     all_selected = all(
@@ -367,9 +412,15 @@ if st.session_state.step == 5:
 
     col1, col2 = st.columns(2)
     with col1:
-        st.button("이전단계로", on_click=go_back_to_step4)
+        st.button(
+            "이전단계로",
+            on_click=go_back_to_step4 if st.session_state.step5_page == 0 else go_to_prev_step5_page,
+        )
     with col2:
-        st.button("다음단계로", on_click=go_to_step6, disabled=not all_selected)
+        if st.session_state.step5_page == len(st.session_state.step5_targets) - 1:
+            st.button("다음단계로", on_click=go_to_step6, disabled=not all_selected)
+        else:
+            st.button("다음항목 선택하기", on_click=go_to_next_step5_page)
 
 if "step6_selections" not in st.session_state:
     st.session_state.step6_selections = {}
@@ -383,7 +434,7 @@ step6_items = {
         }
     },
     "s2_2": {
-        "title": "3.2.S.2 제조\n2. 원료의약품의 제조소 또는 제조업자의 변경 또는 추가",
+        "title": "3.2.S.2 제조\n2. 원료의약품의 제조소 또는 제조업자의 변경 또는 추가\n",
         "subitems": {
             "2a": "2a. 원료의약품의 출발물질 생산",
             "2b": "2b. 원료의약품의 중간체 생산",
@@ -724,8 +775,36 @@ def go_to_step7():
     st.session_state.step = 7
 
 if st.session_state.step == 6:
-    st.markdown("## Step 6")
-    st.write("Step 6. Step5에서 '변경 있음'으로 선택된 항목에 대해 충족요건을 모두 선택하세요.")
+    st.markdown(
+        "<h2 style='font-size:24px;'>허가 후 제조방법 변경사항의 충족조건 선택</h2>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<p style='font-size:16px;'>변경사항의 충족조건을 충족 여부를 선택하세요.</p>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stRadio"] > label p {
+            font-size:16px;
+            margin-top:0;
+            margin-bottom:0;
+        }
+        div[data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {
+            font-size:16px;
+            margin-top:0;
+            margin-bottom:0;
+        }
+        div[data-testid="stMarkdownContainer"] p {
+            margin-top:0;
+            margin-bottom:0;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
     targets = st.session_state.step6_targets
     if not targets:
@@ -735,7 +814,16 @@ if st.session_state.step == 6:
         block = step6_items.get(current_key)
 
         if block:
-            st.markdown(f"### {block['title']}")
+            title_parts = block["title"].split("\n", 1)
+            st.markdown(
+                f"<p style='font-size:22px;'>{title_parts[0]}</p>",
+                unsafe_allow_html=True,
+            )
+            if len(title_parts) > 1:
+                st.markdown(
+                    f"<p style='font-size:18px;'>{title_parts[1]}</p>",
+                    unsafe_allow_html=True,
+                )
 
             # 자동 동기화 쌍 정의
             sync_pairs = {
@@ -749,9 +837,22 @@ if st.session_state.step == 6:
             for sub_key, sub_text in block.get("subitems", {}).items():
                 full_key = f"{current_key}_sub_{sub_key}"
 
+                sub_label = sub_text
+                st.markdown(
+                    f"<p style='font-size:16px; margin-bottom:10px;'>{sub_label}</p>",
+                    unsafe_allow_html=True,
+                )
+
                 if current_key == "p3_15":
                     st.session_state.step6_selections[full_key] = "변경 있음"
-                    st.radio(sub_text, ["변경 있음"], index=0, key=full_key, disabled=True)
+                    st.radio(
+                        "",
+                        ["변경 있음"],
+                        index=0,
+                        key=full_key,
+                        disabled=True,
+                        label_visibility="collapsed",
+                    )
 
                 elif sub_key in sync_pairs:
                     other = sync_pairs[sub_key]
@@ -759,10 +860,11 @@ if st.session_state.step == 6:
 
                     current_value = st.session_state.step6_selections.get(full_key, "변경 없음")
                     current_value = st.radio(
-                        sub_text,
+                        "",
                         ["변경 있음", "변경 없음"],
                         key=full_key,
-                        index=0 if current_value == "변경 있음" else 1
+                        index=0 if current_value == "변경 있음" else 1,
+                        label_visibility="collapsed",
                     )
 
                     st.session_state.step6_selections[full_key] = current_value
@@ -770,19 +872,25 @@ if st.session_state.step == 6:
 
                 else:
                     st.session_state.step6_selections[full_key] = st.radio(
-                        sub_text,
+                        "",
                         ["변경 있음", "변경 없음"],
-                        key=full_key
+                        key=full_key,
+                        label_visibility="collapsed",
                     )
 
             # 충족요건
             for req_key, req_text in block.get("requirements", {}).items():
                 full_key = f"{current_key}_req_{req_key}"
-                label = req_text
+                req_label = req_text.replace("\n", "<br>")
+                st.markdown(
+                    f"<p style='font-size:16px; margin-bottom:10px;'>{req_label}</p>",
+                    unsafe_allow_html=True,
+                )
                 st.session_state.step6_selections[full_key] = st.radio(
-                    label,
+                    "",
                     ["충족", "미충족"],
-                    key=full_key
+                    key=full_key,
+                    label_visibility="collapsed",
                 )
 
         else:
@@ -805,7 +913,7 @@ if st.session_state.step == 6:
 STEP7_ROWS = [
     {
         "title_key": "s1_1",
-        "title_text": "3.2.S.1 일반정보\n1. 원료의약품 명칭변경",
+        "title_text": "3.2.S.1 일반정보\n1. 원료의약품 명칭변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s1_1_req_1\") == \"충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -813,7 +921,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_2",
-        "title_text": "3.2.S.2 제조\n2. 원료의약품의 제조소 또는 제조업자의 변경 또는 추가",
+        "title_text": "3.2.S.2 제조\n2. 원료의약품의 제조소 또는 제조업자의 변경 또는 추가\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_2_sub_2a\") == \"변경 있음\" and step6_selections.get(\"s2_2_req_3\") == \"충족\" and step6_selections.get(\"s2_2_req_4\") == \"충족\" and step6_selections.get(\"s2_2_req_9\") == \"충족\" and step6_selections.get(\"s2_2_req_1\") == \"미충족\" and step6_selections.get(\"s2_2_req_2\") == \"미충족\" and step6_selections.get(\"s2_2_req_5\") == \"미충족\" and step6_selections.get(\"s2_2_req_6\") == \"미충족\" and step6_selections.get(\"s2_2_req_7\") == \"미충족\" and step6_selections.get(\"s2_2_req_8\") == \"미충족\" and step6_selections.get(\"s2_2_req_10\") == \"미충족\"\n)",
         "output_1_tag": "IR",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nIR, 시판전보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2제4항 단서조항에 따른 시판전 보고(Immediate Report, IR) 수준의 변경사항입니다.",
@@ -821,7 +929,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_2",
-        "title_text": "3.2.S.2 제조\n2. 원료의약품의 제조소 또는 제조업자의 변경 또는 추가",
+        "title_text": "3.2.S.2 제조\n2. 원료의약품의 제조소 또는 제조업자의 변경 또는 추가\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_2_sub_2a\") == \"변경 있음\" and step6_selections.get(\"s2_2_req_1\") == \"미충족\" and step6_selections.get(\"s2_2_req_2\") == \"미충족\" and step6_selections.get(\"s2_2_req_3\") == \"미충족\" and step6_selections.get(\"s2_2_req_4\") == \"미충족\" and step6_selections.get(\"s2_2_req_5\") == \"미충족\" and step6_selections.get(\"s2_2_req_6\") == \"미충족\" and step6_selections.get(\"s2_2_req_7\") == \"미충족\" and step6_selections.get(\"s2_2_req_8\") == \"미충족\" and step6_selections.get(\"s2_2_req_9\") == \"미충족\" and step6_selections.get(\"s2_2_req_10\") == \"미충족\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -829,7 +937,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_2",
-        "title_text": "3.2.S.2 제조\n2. 원료의약품의 제조소 또는 제조업자의 변경 또는 추가",
+        "title_text": "3.2.S.2 제조\n2. 원료의약품의 제조소 또는 제조업자의 변경 또는 추가\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_2_sub_2b\") == \"변경 있음\" and step6_selections.get(\"s2_2_req_3\") == \"충족\" and step6_selections.get(\"s2_2_req_5\") == \"충족\" and step6_selections.get(\"s2_2_req_1\") == \"미충족\" and step6_selections.get(\"s2_2_req_2\") == \"미충족\" and step6_selections.get(\"s2_2_req_4\") == \"미충족\" and step6_selections.get(\"s2_2_req_6\") == \"미충족\" and step6_selections.get(\"s2_2_req_7\") == \"미충족\" and step6_selections.get(\"s2_2_req_8\") == \"미충족\" and step6_selections.get(\"s2_2_req_9\") == \"미충족\" and step6_selections.get(\"s2_2_req_10\") == \"미충족\"\n)",
         "output_1_tag": "IR",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nIR, 시판전보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2제4항 단서조항에 따른 시판전 보고(Immediate Report, IR) 수준의 변경사항입니다.",
@@ -837,7 +945,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_2",
-        "title_text": "3.2.S.2 제조\n2. 원료의약품의 제조소 또는 제조업자의 변경 또는 추가",
+        "title_text": "3.2.S.2 제조\n2. 원료의약품의 제조소 또는 제조업자의 변경 또는 추가\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_2_sub_2b\") == \"변경 있음\" and step6_selections.get(\"s2_2_req_1\") == \"미충족\" and step6_selections.get(\"s2_2_req_2\") == \"미충족\" and step6_selections.get(\"s2_2_req_3\") == \"미충족\" and step6_selections.get(\"s2_2_req_4\") == \"미충족\" and step6_selections.get(\"s2_2_req_5\") == \"미충족\" and step6_selections.get(\"s2_2_req_6\") == \"미충족\" and step6_selections.get(\"s2_2_req_7\") == \"미충족\" and step6_selections.get(\"s2_2_req_8\") == \"미충족\" and step6_selections.get(\"s2_2_req_9\") == \"미충족\" and step6_selections.get(\"s2_2_req_10\") == \"미충족\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -845,7 +953,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_2",
-        "title_text": "3.2.S.2 제조\n2. 원료의약품의 제조소 또는 제조업자의 변경 또는 추가",
+        "title_text": "3.2.S.2 제조\n2. 원료의약품의 제조소 또는 제조업자의 변경 또는 추가\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_2_sub_2c\") == \"변경 있음\" and step6_selections.get(\"s2_2_req_1\") == \"충족\" and step6_selections.get(\"s2_2_req_2\") == \"충족\" and step6_selections.get(\"s2_2_req_3\") == \"충족\" and step6_selections.get(\"s2_2_req_6\") == \"충족\" and step6_selections.get(\"s2_2_req_7\") == \"충족\" and step6_selections.get(\"s2_2_req_8\") == \"충족\" and step6_selections.get(\"s2_2_req_4\") == \"미충족\" and step6_selections.get(\"s2_2_req_5\") == \"미충족\" and step6_selections.get(\"s2_2_req_9\") == \"미충족\" and step6_selections.get(\"s2_2_req_10\") == \"미충족\"\n)",
         "output_1_tag": "IR",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nIR, 시판전보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2제4항 단서조항에 따른 시판전 보고(Immediate Report, IR) 수준의 변경사항입니다.",
@@ -853,7 +961,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_2",
-        "title_text": "3.2.S.2 제조\n2. 원료의약품의 제조소 또는 제조업자의 변경 또는 추가",
+        "title_text": "3.2.S.2 제조\n2. 원료의약품의 제조소 또는 제조업자의 변경 또는 추가\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_2_sub_2c\") == \"변경 있음\" and step6_selections.get(\"s2_2_req_1\") == \"미충족\" and step6_selections.get(\"s2_2_req_2\") == \"미충족\" and step6_selections.get(\"s2_2_req_3\") == \"미충족\" and step6_selections.get(\"s2_2_req_4\") == \"미충족\" and step6_selections.get(\"s2_2_req_5\") == \"미충족\" and step6_selections.get(\"s2_2_req_6\") == \"미충족\" and step6_selections.get(\"s2_2_req_7\") == \"미충족\" and step6_selections.get(\"s2_2_req_8\") == \"미충족\" and step6_selections.get(\"s2_2_req_9\") == \"미충족\" and step6_selections.get(\"s2_2_req_10\") == \"미충족\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -861,7 +969,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_2",
-        "title_text": "3.2.S.2 제조\n2. 원료의약품의 제조소 또는 제조업자의 변경 또는 추가",
+        "title_text": "3.2.S.2 제조\n2. 원료의약품의 제조소 또는 제조업자의 변경 또는 추가\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_2_sub_2c\") == \"변경 있음\" and step6_selections.get(\"s2_2_req_10\") == \"충족\" and step6_selections.get(\"s2_2_req_1\") == \"미충족\" and step6_selections.get(\"s2_2_req_2\") == \"미충족\" and step6_selections.get(\"s2_2_req_3\") == \"미충족\" and step6_selections.get(\"s2_2_req_4\") == \"미충족\" and step6_selections.get(\"s2_2_req_5\") == \"미충족\" and step6_selections.get(\"s2_2_req_6\") == \"미충족\" and step6_selections.get(\"s2_2_req_7\") == \"미충족\" and step6_selections.get(\"s2_2_req_8\") == \"미충족\" and step6_selections.get(\"s2_2_req_9\") == \"미충족\"\n)",
         "output_1_tag": "Cmin",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmin, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Minor change(Cmin)수준의 변경사항입니다.",
@@ -869,7 +977,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_3",
-        "title_text": "3.2.S.2 제조\n3. 원료의약품 제조 공정의 변경",
+        "title_text": "3.2.S.2 제조\n3. 원료의약품 제조 공정의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_3_req_1\") == \"충족\" and step6_selections.get(\"s2_3_req_2\") == \"충족\" and step6_selections.get(\"s2_3_req_3\") == \"충족\" and step6_selections.get(\"s2_3_req_4\") == \"충족\" and step6_selections.get(\"s2_3_req_5\") == \"충족\" and step6_selections.get(\"s2_3_req_6\") == \"충족\" and step6_selections.get(\"s2_3_req_7\") == \"충족\" and step6_selections.get(\"s2_3_req_8\") == \"충족\" and step6_selections.get(\"s2_3_req_9\") == \"미충족\"\n)",
         "output_1_tag": "IR",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nIR, 시판전보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2제4항 단서조항에 따른 시판전 보고(Immediate Report, IR) 수준의 변경사항입니다.",
@@ -877,7 +985,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_3",
-        "title_text": "3.2.S.2 제조\n3. 원료의약품 제조 공정의 변경",
+        "title_text": "3.2.S.2 제조\n3. 원료의약품 제조 공정의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_3_req_1\") == \"충족\" and step6_selections.get(\"s2_3_req_2\") == \"충족\" and step6_selections.get(\"s2_3_req_3\") == \"충족\" and step6_selections.get(\"s2_3_req_5\") == \"충족\" and step6_selections.get(\"s2_3_req_6\") == \"충족\" and step6_selections.get(\"s2_3_req_7\") == \"충족\" and step6_selections.get(\"s2_3_req_9\") == \"충족\" and step6_selections.get(\"s2_3_req_4\") == \"미충족\" and step6_selections.get(\"s2_3_req_8\") == \"미충족\"\n)",
         "output_1_tag": "Cmin",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmin, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Minor change(Cmin)수준의 변경사항입니다.",
@@ -885,7 +993,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_3",
-        "title_text": "3.2.S.2 제조\n3. 원료의약품 제조 공정의 변경",
+        "title_text": "3.2.S.2 제조\n3. 원료의약품 제조 공정의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_3_req_1\") == \"충족\" and step6_selections.get(\"s2_3_req_2\") == \"충족\" and step6_selections.get(\"s2_3_req_3\") == \"충족\" and step6_selections.get(\"s2_3_req_4\") == \"충족\" and step6_selections.get(\"s2_3_req_5\") == \"충족\" and step6_selections.get(\"s2_3_req_6\") == \"충족\" and step6_selections.get(\"s2_3_req_7\") == \"미충족\" and step6_selections.get(\"s2_3_req_8\") == \"미충족\" and step6_selections.get(\"s2_3_req_9\") == \"미충족\"\n)",
         "output_1_tag": "Cmin",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmin, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Minor change(Cmin)수준의 변경사항입니다.",
@@ -893,7 +1001,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_3",
-        "title_text": "3.2.S.2 제조\n3. 원료의약품 제조 공정의 변경",
+        "title_text": "3.2.S.2 제조\n3. 원료의약품 제조 공정의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_3_req_1\") == \"미충족\" and step6_selections.get(\"s2_3_req_2\") == \"미충족\" and step6_selections.get(\"s2_3_req_3\") == \"미충족\" and step6_selections.get(\"s2_3_req_4\") == \"미충족\" and step6_selections.get(\"s2_3_req_5\") == \"미충족\" and step6_selections.get(\"s2_3_req_6\") == \"미충족\" and step6_selections.get(\"s2_3_req_7\") == \"미충족\" and step6_selections.get(\"s2_3_req_8\") == \"미충족\" and step6_selections.get(\"s2_3_req_9\") == \"미충족\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -901,7 +1009,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_4",
-        "title_text": "3.2.S.2 제조\n4. 원료의약품 제조 공정관리 규격의 변경",
+        "title_text": "3.2.S.2 제조\n4. 원료의약품 제조 공정관리 규격의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_4_sub_4a\") == \"변경 있음\" and step6_selections.get(\"s2_4_req_1\") == \"충족\" and step6_selections.get(\"s2_4_req_2\") == \"충족\" and step6_selections.get(\"s2_4_req_3\") == \"충족\" and step6_selections.get(\"s2_4_req_4\") == \"미충족\" and step6_selections.get(\"s2_4_req_5\") == \"미충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -909,7 +1017,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_4",
-        "title_text": "3.2.S.2 제조\n4. 원료의약품 제조 공정관리 규격의 변경",
+        "title_text": "3.2.S.2 제조\n4. 원료의약품 제조 공정관리 규격의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_4_sub_4b\") == \"변경 있음\" and step6_selections.get(\"s2_4_req_1\") == \"충족\" and step6_selections.get(\"s2_4_req_2\") == \"미충족\" and step6_selections.get(\"s2_4_req_3\") == \"미충족\" and step6_selections.get(\"s2_4_req_4\") == \"미충족\" and step6_selections.get(\"s2_4_req_5\") == \"미충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -917,7 +1025,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_4",
-        "title_text": "3.2.S.2 제조\n4. 원료의약품 제조 공정관리 규격의 변경",
+        "title_text": "3.2.S.2 제조\n4. 원료의약품 제조 공정관리 규격의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_4_sub_4c\") == \"변경 있음\" and step6_selections.get(\"s2_4_req_1\") == \"미충족\" and step6_selections.get(\"s2_4_req_2\") == \"미충족\" and step6_selections.get(\"s2_4_req_3\") == \"미충족\" and step6_selections.get(\"s2_4_req_4\") == \"미충족\" and step6_selections.get(\"s2_4_req_5\") == \"미충족\"\n)",
         "output_1_tag": "Cmin",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmin, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Minor change(Cmin)수준의 변경사항입니다.",
@@ -925,7 +1033,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_4",
-        "title_text": "3.2.S.2 제조\n4. 원료의약품 제조 공정관리 규격의 변경",
+        "title_text": "3.2.S.2 제조\n4. 원료의약품 제조 공정관리 규격의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_4_sub_4d\") == \"변경 있음\" and step6_selections.get(\"s2_4_req_1\") == \"충족\" and step6_selections.get(\"s2_4_req_4\") == \"충족\" and step6_selections.get(\"s2_4_req_5\") == \"충족\" and step6_selections.get(\"s2_4_req_2\") == \"미충족\" and step6_selections.get(\"s2_4_req_3\") == \"미충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -933,7 +1041,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_4",
-        "title_text": "3.2.S.2 제조\n4. 원료의약품 제조 공정관리 규격의 변경",
+        "title_text": "3.2.S.2 제조\n4. 원료의약품 제조 공정관리 규격의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_4_sub_4d\") == \"변경 있음\" and step6_selections.get(\"s2_4_req_1\") == \"충족\" and step6_selections.get(\"s2_4_req_2\") == \"미충족\" and step6_selections.get(\"s2_4_req_3\") == \"미충족\" and step6_selections.get(\"s2_4_req_4\") == \"미충족\" and step6_selections.get(\"s2_4_req_5\") == \"미충족\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -941,7 +1049,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_4",
-        "title_text": "3.2.S.2 제조\n4. 원료의약품 제조 공정관리 규격의 변경",
+        "title_text": "3.2.S.2 제조\n4. 원료의약품 제조 공정관리 규격의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_4_sub_4e\") == \"변경 있음\" and step6_selections.get(\"s2_4_req_1\") == \"충족\" and step6_selections.get(\"s2_4_req_2\") == \"미충족\" and step6_selections.get(\"s2_4_req_3\") == \"미충족\" and step6_selections.get(\"s2_4_req_4\") == \"미충족\" and step6_selections.get(\"s2_4_req_5\") == \"미충족\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -949,7 +1057,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_5",
-        "title_text": "3.2.S.2 제조\n5. 원료의약품 또는 중간체의 제조 규모 변경",
+        "title_text": "3.2.S.2 제조\n5. 원료의약품 또는 중간체의 제조 규모 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_5_sub_5a\") == \"변경 있음\" and step6_selections.get(\"s2_5_req_1\") == \"충족\" and step6_selections.get(\"s2_5_req_2\") == \"충족\" and step6_selections.get(\"s2_5_req_3\") == \"충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -957,7 +1065,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_5",
-        "title_text": "3.2.S.2 제조\n5. 원료의약품 또는 중간체의 제조 규모 변경",
+        "title_text": "3.2.S.2 제조\n5. 원료의약품 또는 중간체의 제조 규모 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_5_sub_5b\") == \"변경 있음\" and step6_selections.get(\"s2_5_req_1\") == \"충족\" and step6_selections.get(\"s2_5_req_2\") == \"미충족\" and step6_selections.get(\"s2_5_req_3\") == \"충족\"\n)",
         "output_1_tag": "AR",
          "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -965,7 +1073,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_5",
-        "title_text": "3.2.S.2 제조\n5. 원료의약품 또는 중간체의 제조 규모 변경",
+        "title_text": "3.2.S.2 제조\n5. 원료의약품 또는 중간체의 제조 규모 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_5_sub_5c\") == \"변경 있음\" and step6_selections.get(\"s2_5_req_1\") == \"충족\" and step6_selections.get(\"s2_5_req_2\") == \"충족\" and step6_selections.get(\"s2_5_req_3\") == \"미충족\"\n)",
         "output_1_tag": "Cmin",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmin, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Minor change(Cmin)수준의 변경사항입니다.",
@@ -973,7 +1081,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_6",
-        "title_text": "3.2.S.2 제조\n6. 원료의약품의 제조에 사용되는 원료(출발물질, 중간체, 용매, 시약 등)의 규격변경",
+        "title_text": "3.2.S.2 제조\n6. 원료의약품의 제조에 사용되는 원료(출발물질, 중간체, 용매, 시약 등)의 규격변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_6_sub_6a\") == \"변경 있음\" and step6_selections.get(\"s2_6_req_1\") == \"충족\" and step6_selections.get(\"s2_6_req_2\") == \"충족\" and step6_selections.get(\"s2_6_req_3\") == \"충족\" and step6_selections.get(\"s2_6_req_4\") == \"미충족\" and step6_selections.get(\"s2_6_req_5\") == \"미충족\" and step6_selections.get(\"s2_6_req_6\") == \"미충족\" and step6_selections.get(\"s2_6_req_7\") == \"미충족\" and step6_selections.get(\"s2_6_req_8\") == \"미충족\" and step6_selections.get(\"s2_6_req_9\") == \"미충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -981,7 +1089,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_6",
-        "title_text": "3.2.S.2 제조\n6. 원료의약품의 제조에 사용되는 원료(출발물질, 중간체, 용매, 시약 등)의 규격변경",
+        "title_text": "3.2.S.2 제조\n6. 원료의약품의 제조에 사용되는 원료(출발물질, 중간체, 용매, 시약 등)의 규격변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_6_sub_6b\") == \"변경 있음\" and step6_selections.get(\"s2_6_req_4\") == \"충족\" and step6_selections.get(\"s2_6_req_5\") == \"충족\" and step6_selections.get(\"s2_6_req_6\") == \"충족\" and step6_selections.get(\"s2_6_req_1\") == \"미충족\" and step6_selections.get(\"s2_6_req_2\") == \"미충족\" and step6_selections.get(\"s2_6_req_3\") == \"미충족\" and step6_selections.get(\"s2_6_req_7\") == \"미충족\" and step6_selections.get(\"s2_6_req_8\") == \"미충족\" and step6_selections.get(\"s2_6_req_9\") == \"미충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -989,7 +1097,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_6",
-        "title_text": "3.2.S.2 제조\n6. 원료의약품의 제조에 사용되는 원료(출발물질, 중간체, 용매, 시약 등)의 규격변경",
+        "title_text": "3.2.S.2 제조\n6. 원료의약품의 제조에 사용되는 원료(출발물질, 중간체, 용매, 시약 등)의 규격변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_6_sub_6c\") == \"변경 있음\" and step6_selections.get(\"s2_6_req_1\") == \"충족\" and step6_selections.get(\"s2_6_req_5\") == \"충족\" and step6_selections.get(\"s2_6_req_6\") == \"충족\" and step6_selections.get(\"s2_6_req_7\") == \"충족\" and step6_selections.get(\"s2_6_req_2\") == \"미충족\" and step6_selections.get(\"s2_6_req_3\") == \"미충족\" and step6_selections.get(\"s2_6_req_4\") == \"미충족\" and step6_selections.get(\"s2_6_req_8\") == \"미충족\" and step6_selections.get(\"s2_6_req_9\") == \"미충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -997,7 +1105,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_6",
-        "title_text": "3.2.S.2 제조\n6. 원료의약품의 제조에 사용되는 원료(출발물질, 중간체, 용매, 시약 등)의 규격변경",
+        "title_text": "3.2.S.2 제조\n6. 원료의약품의 제조에 사용되는 원료(출발물질, 중간체, 용매, 시약 등)의 규격변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_6_sub_6d\") == \"변경 있음\" and step6_selections.get(\"s2_6_req_1\") == \"충족\" and step6_selections.get(\"s2_6_req_8\") == \"충족\" and step6_selections.get(\"s2_6_req_9\") == \"충족\" and step6_selections.get(\"s2_6_req_2\") == \"미충족\" and step6_selections.get(\"s2_6_req_3\") == \"미충족\" and step6_selections.get(\"s2_6_req_4\") == \"미충족\" and step6_selections.get(\"s2_6_req_5\") == \"미충족\" and step6_selections.get(\"s2_6_req_6\") == \"미충족\" and step6_selections.get(\"s2_6_req_7\") == \"미충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -1005,7 +1113,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_6",
-        "title_text": "3.2.S.2 제조\n6. 원료의약품의 제조에 사용되는 원료(출발물질, 중간체, 용매, 시약 등)의 규격변경",
+        "title_text": "3.2.S.2 제조\n6. 원료의약품의 제조에 사용되는 원료(출발물질, 중간체, 용매, 시약 등)의 규격변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_6_sub_6e\") == \"변경 있음\" and step6_selections.get(\"s2_6_req_1\") == \"미충족\" and step6_selections.get(\"s2_6_req_2\") == \"미충족\" and step6_selections.get(\"s2_6_req_3\") == \"미충족\" and step6_selections.get(\"s2_6_req_4\") == \"미충족\" and step6_selections.get(\"s2_6_req_5\") == \"미충족\" and step6_selections.get(\"s2_6_req_6\") == \"미충족\" and step6_selections.get(\"s2_6_req_7\") == \"미충족\" and step6_selections.get(\"s2_6_req_8\") == \"미충족\" and step6_selections.get(\"s2_6_req_9\") == \"미충족\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -1013,7 +1121,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_6",
-        "title_text": "3.2.S.2 제조\n6. 원료의약품의 제조에 사용되는 원료(출발물질, 중간체, 용매, 시약 등)의 규격변경",
+        "title_text": "3.2.S.2 제조\n6. 원료의약품의 제조에 사용되는 원료(출발물질, 중간체, 용매, 시약 등)의 규격변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_6_sub_6f\") == \"변경 있음\" and step6_selections.get(\"s2_6_req_3\") == \"충족\" and step6_selections.get(\"s2_6_req_6\") == \"충족\" and step6_selections.get(\"s2_6_req_7\") == \"충족\" and step6_selections.get(\"s2_6_req_9\") == \"충족\" and step6_selections.get(\"s2_6_req_1\") == \"미충족\" and step6_selections.get(\"s2_6_req_2\") == \"미충족\" and step6_selections.get(\"s2_6_req_4\") == \"미충족\" and step6_selections.get(\"s2_6_req_5\") == \"미충족\" and step6_selections.get(\"s2_6_req_8\") == \"미충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -1021,7 +1129,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "s2_6",
-        "title_text": "3.2.S.2 제조\n6. 원료의약품의 제조에 사용되는 원료(출발물질, 중간체, 용매, 시약 등)의 규격변경",
+        "title_text": "3.2.S.2 제조\n6. 원료의약품의 제조에 사용되는 원료(출발물질, 중간체, 용매, 시약 등)의 규격변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"s2_6_sub_6g\") == \"변경 있음\" and step6_selections.get(\"s2_6_req_1\") == \"미충족\" and step6_selections.get(\"s2_6_req_2\") == \"미충족\" and step6_selections.get(\"s2_6_req_3\") == \"미충족\" and step6_selections.get(\"s2_6_req_4\") == \"미충족\" and step6_selections.get(\"s2_6_req_5\") == \"미충족\" and step6_selections.get(\"s2_6_req_6\") == \"미충족\" and step6_selections.get(\"s2_6_req_7\") == \"미충족\" and step6_selections.get(\"s2_6_req_8\") == \"미충족\" and step6_selections.get(\"s2_6_req_9\") == \"미충족\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -1029,7 +1137,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p1_7",
-        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n7. 완제의약품 중 고형 제제의 조성 변경",
+        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n7. 완제의약품 중 고형 제제의 조성 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p1_7_sub_7a\") == \"변경 있음\" and step6_selections.get(\"p1_7_req_1\") == \"충족\" and step6_selections.get(\"p1_7_req_4\") == \"충족\" and step6_selections.get(\"p1_7_req_2\") == \"미충족\" and step6_selections.get(\"p1_7_req_3\") == \"미충족\" and step6_selections.get(\"p1_7_req_5\") == \"미충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -1037,7 +1145,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p1_7",
-        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n7. 완제의약품 중 고형 제제의 조성 변경",
+        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n7. 완제의약품 중 고형 제제의 조성 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p1_7_sub_7b\") == \"변경 있음\" and step6_selections.get(\"p1_7_req_1\") == \"충족\" and step6_selections.get(\"p1_7_req_2\") == \"충족\" and step6_selections.get(\"p1_7_req_3\") == \"충족\" and step6_selections.get(\"p1_7_req_4\") == \"충족\" and step6_selections.get(\"p1_7_req_5\") == \"충족\"\n)",
         "output_1_tag": "IR",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nIR, 시판전보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2제4항 단서조항에 따른 시판전 보고(Immediate Report, IR) 수준의 변경사항입니다.",
@@ -1045,7 +1153,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p1_7",
-        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n7. 완제의약품 중 고형 제제의 조성 변경",
+        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n7. 완제의약품 중 고형 제제의 조성 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p1_7_sub_7b\") == \"변경 있음\" and step6_selections.get(\"p1_7_req_1\") == \"충족\" and step6_selections.get(\"p1_7_req_2\") == \"충족\" and step6_selections.get(\"p1_7_req_3\") == \"충족\" and step6_selections.get(\"p1_7_req_4\") == \"충족\" and step6_selections.get(\"p1_7_req_5\") == \"미충족\"\n)",
         "output_1_tag": "Cmin",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmin, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Minor change(Cmin)수준의 변경사항입니다.",
@@ -1053,7 +1161,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p1_7",
-        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n7. 완제의약품 중 고형 제제의 조성 변경",
+        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n7. 완제의약품 중 고형 제제의 조성 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p1_7_sub_7c\") == \"변경 있음\" and step6_selections.get(\"p1_7_req_1\") == \"충족\" and step6_selections.get(\"p1_7_req_4\") == \"충족\" and step6_selections.get(\"p1_7_req_2\") == \"미충족\" and step6_selections.get(\"p1_7_req_3\") == \"미충족\" and step6_selections.get(\"p1_7_req_5\") == \"미충족\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -1061,7 +1169,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p1_8",
-        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n8. 고형제제의 코팅층 무게 변경",
+        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n8. 고형제제의 코팅층 무게 변경\n",
         "output_condition_all_met": "(\n    \n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -1069,7 +1177,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p1_9",
-        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n9. 완제의약품(고형제제 제외)의 조성 변경",
+        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n9. 완제의약품(고형제제 제외)의 조성 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p1_9_req_9\") == \"충족\" and step6_selections.get(\"p1_9_req_8\") == \"미충족\" and (\n        step6_selections.get(\"p1_9_req_1\") == \"충족\" or step6_selections.get(\"p1_9_req_2\") == \"충족\" or step6_selections.get(\"p1_9_req_3\") == \"충족\" or step6_selections.get(\"p1_9_req_4\") == \"충족\" or step6_selections.get(\"p1_9_req_5\") == \"충족\" or step6_selections.get(\"p1_9_req_6\") == \"충족\" or step6_selections.get(\"p1_9_req_7\") == \"충족\"\n   )\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -1077,7 +1185,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p1_9",
-        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n9. 완제의약품(고형제제 제외)의 조성 변경",
+        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n9. 완제의약품(고형제제 제외)의 조성 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p1_9_req_8\") == \"충족\" and step6_selections.get(\"p1_9_req_9\") == \"충족\" and step6_selections.get(\"p1_9_req_1\") == \"미충족\" and step6_selections.get(\"p1_9_req_2\") == \"미충족\" and step6_selections.get(\"p1_9_req_3\") == \"미충족\" and step6_selections.get(\"p1_9_req_4\") == \"미충족\" and step6_selections.get(\"p1_9_req_5\") == \"미충족\" and step6_selections.get(\"p1_9_req_6\") == \"미충족\" and step6_selections.get(\"p1_9_req_7\") == \"미충족\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -1085,7 +1193,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p1_10",
-        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n10. 완제의약품(고형제제 제외)에 쓰이는 착색제 또는 착향제의 종류와 분량의 변경",
+        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n10. 완제의약품(고형제제 제외)에 쓰이는 착색제 또는 착향제의 종류와 분량의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p1_10_sub_10a\") == \"변경 있음\" and step6_selections.get(\"p1_10_req_1\") == \"충족\" and step6_selections.get(\"p1_10_req_3\") == \"충족\" and step6_selections.get(\"p1_10_req_4\") == \"충족\" and step6_selections.get(\"p1_10_req_8\") == \"충족\" and step6_selections.get(\"p1_10_req_9\") == \"충족\" and step6_selections.get(\"p1_10_req_2\") == \"미충족\" and step6_selections.get(\"p1_10_req_5\") == \"미충족\" and step6_selections.get(\"p1_10_req_6\") == \"미충족\" and step6_selections.get(\"p1_10_req_7\") == \"미충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -1093,7 +1201,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p1_10",
-        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n10. 완제의약품(고형제제 제외)에 쓰이는 착색제 또는 착향제의 종류와 분량의 변경",
+        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n10. 완제의약품(고형제제 제외)에 쓰이는 착색제 또는 착향제의 종류와 분량의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p1_10_sub_10b\") == \"변경 있음\" and step6_selections.get(\"p1_10_req_1\") == \"충족\" and step6_selections.get(\"p1_10_req_2\") == \"충족\" and step6_selections.get(\"p1_10_req_3\") == \"충족\" and step6_selections.get(\"p1_10_req_4\") == \"충족\" and step6_selections.get(\"p1_10_req_8\") == \"충족\" and step6_selections.get(\"p1_10_req_9\") == \"충족\" and step6_selections.get(\"p1_10_req_5\") == \"미충족\" and step6_selections.get(\"p1_10_req_6\") == \"미충족\" and step6_selections.get(\"p1_10_req_7\") == \"미충족\"\n)",
         "output_1_tag": "Cmin",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmin, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Minor change(Cmin)수준의 변경사항입니다.",
@@ -1101,7 +1209,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p1_10",
-        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n10. 완제의약품(고형제제 제외)에 쓰이는 착색제 또는 착향제의 종류와 분량의 변경",
+        "title_text": "3.2.P.1 완제의약품의 성상 및 조성\n10. 완제의약품(고형제제 제외)에 쓰이는 착색제 또는 착향제의 종류와 분량의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p1_10_sub_10c\") == \"변경 있음\" and step6_selections.get(\"p1_10_req_1\") == \"충족\" and step6_selections.get(\"p1_10_req_2\") == \"충족\" and step6_selections.get(\"p1_10_req_3\") == \"충족\" and step6_selections.get(\"p1_10_req_5\") == \"충족\" and step6_selections.get(\"p1_10_req_6\") == \"충족\" and step6_selections.get(\"p1_10_req_7\") == \"충족\" and step6_selections.get(\"p1_10_req_8\") == \"충족\" and step6_selections.get(\"p1_10_req_9\") == \"충족\" and step6_selections.get(\"p1_10_req_4\") == \"미충족\"\n)",
         "output_1_tag": "Cmin",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmin, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Minor change(Cmin)수준의 변경사항입니다.",
@@ -1109,7 +1217,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_11",
-        "title_text": "3.2.P.3 제조\n11. 정성적 또는 정량적인 조성과 평균 질량의 변경이 없는 성상의 변경",
+        "title_text": "3.2.P.3 제조\n11. 정성적 또는 정량적인 조성과 평균 질량의 변경이 없는 성상의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_11_sub_11a\") == \"변경 있음\" and step6_selections.get(\"p3_11_req_1\") == \"충족\" and step6_selections.get(\"p3_11_req_2\") == \"충족\" and step6_selections.get(\"p3_11_req_3\") == \"충족\"\n)",
         "output_1_tag": "Cmin",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmin, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Minor change(Cmin)수준의 변경사항입니다.",
@@ -1117,7 +1225,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_11",
-        "title_text": "3.2.P.3 제조\n11. 정성적 또는 정량적인 조성과 평균 질량의 변경이 없는 성상의 변경",
+        "title_text": "3.2.P.3 제조\n11. 정성적 또는 정량적인 조성과 평균 질량의 변경이 없는 성상의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_11_sub_11b\") == \"변경 있음\" and step6_selections.get(\"p3_11_req_1\") == \"충족\" and step6_selections.get(\"p3_11_req_2\") == \"충족\" and step6_selections.get(\"p3_11_req_3\") == \"충족\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -1125,7 +1233,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_12",
-        "title_text": "3.2.P.3 제조\n12. 완제의약품 제조공정의 일부 또는 전부에 대한 제조소 추가 또는 변경",
+        "title_text": "3.2.P.3 제조\n12. 완제의약품 제조공정의 일부 또는 전부에 대한 제조소 추가 또는 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_12_sub_12a\") == \"변경 있음\" and step6_selections.get(\"p3_12_req_2\") == \"충족\" and step6_selections.get(\"p3_12_req_1\") == \"미충족\" and step6_selections.get(\"p3_12_req_3\") == \"미충족\" and step6_selections.get(\"p3_12_req_4\") == \"미충족\" and step6_selections.get(\"p3_12_req_5\") == \"미충족\"\n)",
         "output_1_tag": "Cmin",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmin, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Minor change(Cmin)수준의 변경사항입니다.",
@@ -1133,7 +1241,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_12",
-        "title_text": "3.2.P.3 제조\n12. 완제의약품 제조공정의 일부 또는 전부에 대한 제조소 추가 또는 변경",
+        "title_text": "3.2.P.3 제조\n12. 완제의약품 제조공정의 일부 또는 전부에 대한 제조소 추가 또는 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_12_sub_12b1\") == \"변경 있음\" and step6_selections.get(\"p3_12_req_2\") == \"충족\" and step6_selections.get(\"p3_12_req_3\") == \"충족\" and step6_selections.get(\"p3_12_req_4\") == \"충족\" and step6_selections.get(\"p3_12_req_1\") == \"미충족\" and step6_selections.get(\"p3_12_req_5\") == \"미충족\"\n)",
         "output_1_tag": "Cmin",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmin, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Minor change(Cmin)수준의 변경사항입니다.",
@@ -1141,7 +1249,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_12",
-        "title_text": "3.2.P.3 제조\n12. 완제의약품 제조공정의 일부 또는 전부에 대한 제조소 추가 또는 변경",
+        "title_text": "3.2.P.3 제조\n12. 완제의약품 제조공정의 일부 또는 전부에 대한 제조소 추가 또는 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_12_sub_12b2\") == \"변경 있음\" and step6_selections.get(\"p3_12_req_2\") == \"충족\" and step6_selections.get(\"p3_12_req_3\") == \"충족\" and step6_selections.get(\"p3_12_req_4\") == \"충족\" and step6_selections.get(\"p3_12_req_1\") == \"미충족\" and step6_selections.get(\"p3_12_req_5\") == \"미충족\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -1149,7 +1257,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_12",
-        "title_text": "3.2.P.3 제조\n12. 완제의약품 제조공정의 일부 또는 전부에 대한 제조소 추가 또는 변경",
+        "title_text": "3.2.P.3 제조\n12. 완제의약품 제조공정의 일부 또는 전부에 대한 제조소 추가 또는 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_12_sub_12c1\") == \"변경 있음\" and step6_selections.get(\"p3_12_req_1\") == \"충족\" and step6_selections.get(\"p3_12_req_2\") == \"충족\" and step6_selections.get(\"p3_12_req_3\") == \"미충족\" and step6_selections.get(\"p3_12_req_4\") == \"미충족\" and step6_selections.get(\"p3_12_req_5\") == \"미충족\"\n)",
         "output_1_tag": "Cmin",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmin, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Minor change(Cmin)수준의 변경사항입니다.",
@@ -1157,7 +1265,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_12",
-        "title_text": "3.2.P.3 제조\n12. 완제의약품 제조공정의 일부 또는 전부에 대한 제조소 추가 또는 변경",
+        "title_text": "3.2.P.3 제조\n12. 완제의약품 제조공정의 일부 또는 전부에 대한 제조소 추가 또는 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_12_sub_12c1\") == \"변경 있음\" and step6_selections.get(\"p3_12_req_1\") == \"충족\" and step6_selections.get(\"p3_12_req_2\") == \"충족\" and step6_selections.get(\"p3_12_req_5\") == \"충족\" and step6_selections.get(\"p3_12_req_3\") == \"미충족\" and step6_selections.get(\"p3_12_req_4\") == \"미충족\"\n)",
         "output_1_tag": "Cmin",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmin, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Minor change(Cmin)수준의 변경사항입니다.",
@@ -1165,7 +1273,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_12",
-        "title_text": "3.2.P.3 제조\n12. 완제의약품 제조공정의 일부 또는 전부에 대한 제조소 추가 또는 변경",
+        "title_text": "3.2.P.3 제조\n12. 완제의약품 제조공정의 일부 또는 전부에 대한 제조소 추가 또는 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_12_sub_12c2\") == \"변경 있음\" and step6_selections.get(\"p3_12_req_2\") == \"충족\" and step6_selections.get(\"p3_12_req_1\") == \"미충족\" and step6_selections.get(\"p3_12_req_3\") == \"미충족\" and step6_selections.get(\"p3_12_req_4\") == \"미충족\" and step6_selections.get(\"p3_12_req_5\") == \"미충족\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -1173,7 +1281,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_13",
-        "title_text": "3.2.P.3 제조\n13. 비무균제제의 제조 규모 변경",
+        "title_text": "3.2.P.3 제조\n13. 비무균제제의 제조 규모 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_13_sub_13a\") == \"변경 있음\" and step6_selections.get(\"p3_13_req_1\") == \"충족\" and step6_selections.get(\"p3_13_req_2\") == \"충족\" and step6_selections.get(\"p3_13_req_3\") == \"충족\" and step6_selections.get(\"p3_13_req_4\") == \"충족\" and step6_selections.get(\"p3_13_req_5\") == \"미충족\" and step6_selections.get(\"p3_13_req_6\") == \"미충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -1181,7 +1289,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_13",
-        "title_text": "3.2.P.3 제조\n13. 비무균제제의 제조 규모 변경",
+        "title_text": "3.2.P.3 제조\n13. 비무균제제의 제조 규모 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_13_sub_13b\") == \"변경 있음\" and step6_selections.get(\"p3_13_req_1\") == \"충족\" and step6_selections.get(\"p3_13_req_2\") == \"충족\" and step6_selections.get(\"p3_13_req_3\") == \"충족\" and step6_selections.get(\"p3_13_req_4\") == \"충족\" and step6_selections.get(\"p3_13_req_5\") == \"충족\" and step6_selections.get(\"p3_13_req_6\") == \"미충족\"\n)",
         "output_1_tag": "IR",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nIR, 시판전보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2제4항 단서조항에 따른 시판전 보고(Immediate Report, IR) 수준의 변경사항입니다.",
@@ -1189,7 +1297,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_13",
-        "title_text": "3.2.P.3 제조\n13. 비무균제제의 제조 규모 변경",
+        "title_text": "3.2.P.3 제조\n13. 비무균제제의 제조 규모 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_13_sub_13b\") == \"변경 있음\" and step6_selections.get(\"p3_13_req_1\") == \"충족\" and step6_selections.get(\"p3_13_req_2\") == \"충족\" and step6_selections.get(\"p3_13_req_3\") == \"충족\" and step6_selections.get(\"p3_13_req_4\") == \"충족\" and step6_selections.get(\"p3_13_req_6\") == \"충족\" and step6_selections.get(\"p3_13_req_5\") == \"미충족\"\n)",
         "output_1_tag": "IR",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nIR, 시판전보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2제4항 단서조항에 따른 시판전 보고(Immediate Report, IR) 수준의 변경사항입니다.",
@@ -1197,7 +1305,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_13",
-        "title_text": "3.2.P.3 제조\n13. 비무균제제의 제조 규모 변경",
+        "title_text": "3.2.P.3 제조\n13. 비무균제제의 제조 규모 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_13_sub_13c\") == \"변경 있음\" and step6_selections.get(\"p3_13_req_1\") == \"충족\" and step6_selections.get(\"p3_13_req_2\") == \"충족\" and step6_selections.get(\"p3_13_req_3\") == \"충족\" and step6_selections.get(\"p3_13_req_4\") == \"충족\" and step6_selections.get(\"p3_13_req_5\") == \"미충족\" and step6_selections.get(\"p3_13_req_6\") == \"미충족\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -1205,7 +1313,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_14",
-        "title_text": "3.2.P.3 제조\n14. 무균제제의 제조 규모 변경",
+        "title_text": "3.2.P.3 제조\n14. 무균제제의 제조 규모 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_14_req_1\") == \"충족\" and step6_selections.get(\"p3_14_req_2\") == \"충족\" and step6_selections.get(\"p3_14_req_3\") == \"충족\" and step6_selections.get(\"p3_14_req_4\") == \"충족\" and step6_selections.get(\"p3_14_req_5\") == \"미충족\" and step6_selections.get(\"p3_14_req_6\") == \"미충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -1213,7 +1321,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_14",
-        "title_text": "3.2.P.3 제조\n14. 무균제제의 제조 규모 변경",
+        "title_text": "3.2.P.3 제조\n14. 무균제제의 제조 규모 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_14_req_1\") == \"충족\" and step6_selections.get(\"p3_14_req_2\") == \"충족\" and step6_selections.get(\"p3_14_req_3\") == \"충족\" and step6_selections.get(\"p3_14_req_4\") == \"충족\" and step6_selections.get(\"p3_14_req_5\") == \"충족\" and step6_selections.get(\"p3_14_req_6\") == \"미충족\"\n)",
         "output_1_tag": "IR",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nIR, 시판전보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2제4항 단서조항에 따른 시판전 보고(Immediate Report, IR) 수준의 변경사항입니다.",
@@ -1221,7 +1329,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_14",
-        "title_text": "3.2.P.3 제조\n14. 무균제제의 제조 규모 변경",
+        "title_text": "3.2.P.3 제조\n14. 무균제제의 제조 규모 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_14_req_1\") == \"충족\" and step6_selections.get(\"p3_14_req_2\") == \"충족\" and step6_selections.get(\"p3_14_req_3\") == \"충족\" and step6_selections.get(\"p3_14_req_4\") == \"충족\" and step6_selections.get(\"p3_14_req_6\") == \"충족\" and step6_selections.get(\"p3_14_req_5\") == \"미충족\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -1229,7 +1337,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_15",
-        "title_text": "3.2.P.3 제조\n15. 완제의약품의 제조공정 변경",
+        "title_text": "3.2.P.3 제조\n15. 완제의약품의 제조공정 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_15_sub_15a\") == \"변경 있음\" and step6_selections.get(\"p3_15_req_1\") == \"충족\" and step6_selections.get(\"p3_15_req_2\") == \"충족\" and step6_selections.get(\"p3_15_req_3\") == \"충족\" and step6_selections.get(\"p3_15_req_4\") == \"충족\" and step6_selections.get(\"p3_15_req_5\") == \"충족\" and step6_selections.get(\"p3_15_req_6\") == \"충족\" and step6_selections.get(\"p3_15_req_7\") == \"충족\" and step6_selections.get(\"p3_15_req_8\") == \"미충족\" and step6_selections.get(\"p3_15_req_9\") == \"미충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -1237,7 +1345,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_15",
-        "title_text": "3.2.P.3 제조\n15. 완제의약품의 제조공정 변경",
+        "title_text": "3.2.P.3 제조\n15. 완제의약품의 제조공정 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_15_sub_15b\") == \"변경 있음\" and step6_selections.get(\"p3_15_req_1\") == \"충족\" and step6_selections.get(\"p3_15_req_2\") == \"충족\" and step6_selections.get(\"p3_15_req_3\") == \"충족\" and step6_selections.get(\"p3_15_req_5\") == \"충족\" and step6_selections.get(\"p3_15_req_6\") == \"충족\" and step6_selections.get(\"p3_15_req_7\") == \"충족\" and step6_selections.get(\"p3_15_req_8\") == \"충족\" and step6_selections.get(\"p3_15_req_4\") == \"미충족\" and step6_selections.get(\"p3_15_req_9\") == \"미충족\"\n)",
         "output_1_tag": "IR",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nIR, 시판전보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2제4항 단서조항에 따른 시판전 보고(Immediate Report, IR) 수준의 변경사항입니다.",
@@ -1245,7 +1353,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_15",
-        "title_text": "3.2.P.3 제조\n15. 완제의약품의 제조공정 변경",
+        "title_text": "3.2.P.3 제조\n15. 완제의약품의 제조공정 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_15_sub_15b\") == \"변경 있음\" and step6_selections.get(\"p3_15_req_1\") == \"충족\" and step6_selections.get(\"p3_15_req_2\") == \"충족\" and step6_selections.get(\"p3_15_req_3\") == \"충족\" and step6_selections.get(\"p3_15_req_5\") == \"충족\" and step6_selections.get(\"p3_15_req_6\") == \"충족\" and step6_selections.get(\"p3_15_req_7\") == \"충족\" and step6_selections.get(\"p3_15_req_8\") == \"충족\" and step6_selections.get(\"p3_15_req_9\") == \"충족\" and step6_selections.get(\"p3_15_req_9\") == \"미충족\"\n)",
         "output_1_tag": "IR",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nIR, 시판전보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2제4항 단서조항에 따른 시판전 보고(Immediate Report, IR) 수준의 변경사항입니다.",
@@ -1253,7 +1361,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_15",
-        "title_text": "3.2.P.3 제조\n15. 완제의약품의 제조공정 변경",
+        "title_text": "3.2.P.3 제조\n15. 완제의약품의 제조공정 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_15_sub_15c\") == \"변경 있음\" and step6_selections.get(\"p3_15_req_1\") == \"미충족\" and step6_selections.get(\"p3_15_req_2\") == \"미충족\" and step6_selections.get(\"p3_15_req_3\") == \"미충족\" and step6_selections.get(\"p3_15_req_4\") == \"미충족\" and step6_selections.get(\"p3_15_req_5\") == \"미충족\" and step6_selections.get(\"p3_15_req_6\") == \"미충족\" and step6_selections.get(\"p3_15_req_7\") == \"미충족\" and step6_selections.get(\"p3_15_req_8\") == \"미충족\" and step6_selections.get(\"p3_15_req_9\") == \"미충족\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -1261,7 +1369,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_16",
-        "title_text": "3.2.P.3 제조\n16. 완제의약품 또는 반제품의 제조에 적용되는 공정관리시험 또는 공정관리시험 기준(IPC)의 변경",
+        "title_text": "3.2.P.3 제조\n16. 완제의약품 또는 반제품의 제조에 적용되는 공정관리시험 또는 공정관리시험 기준(IPC)의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_16_sub_16a\") == \"변경 있음\" and step6_selections.get(\"p3_16_req_1\") == \"충족\" and step6_selections.get(\"p3_16_req_2\") == \"충족\" and step6_selections.get(\"p3_16_req_4\") == \"충족\" and step6_selections.get(\"p3_16_req_3\") == \"미충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -1269,7 +1377,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_16",
-        "title_text": "3.2.P.3 제조\n16. 완제의약품 또는 반제품의 제조에 적용되는 공정관리시험 또는 공정관리시험 기준(IPC)의 변경",
+        "title_text": "3.2.P.3 제조\n16. 완제의약품 또는 반제품의 제조에 적용되는 공정관리시험 또는 공정관리시험 기준(IPC)의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_16_sub_16b\") == \"변경 있음\" and step6_selections.get(\"p3_16_req_2\") == \"충족\" and step6_selections.get(\"p3_16_req_1\") == \"미충족\" and step6_selections.get(\"p3_16_req_3\") == \"미충족\" and step6_selections.get(\"p3_16_req_4\") == \"미충족\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -1277,7 +1385,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_16",
-        "title_text": "3.2.P.3 제조\n16. 완제의약품 또는 반제품의 제조에 적용되는 공정관리시험 또는 공정관리시험 기준(IPC)의 변경",
+        "title_text": "3.2.P.3 제조\n16. 완제의약품 또는 반제품의 제조에 적용되는 공정관리시험 또는 공정관리시험 기준(IPC)의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_16_sub_16c\") == \"변경 있음\" and step6_selections.get(\"p3_16_req_2\") == \"충족\" and step6_selections.get(\"p3_16_req_3\") == \"충족\" and step6_selections.get(\"p3_16_req_1\") == \"미충족\" and step6_selections.get(\"p3_16_req_4\") == \"미충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -1285,7 +1393,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_16",
-        "title_text": "3.2.P.3 제조\n16. 완제의약품 또는 반제품의 제조에 적용되는 공정관리시험 또는 공정관리시험 기준(IPC)의 변경",
+        "title_text": "3.2.P.3 제조\n16. 완제의약품 또는 반제품의 제조에 적용되는 공정관리시험 또는 공정관리시험 기준(IPC)의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_16_sub_16d\") == \"변경 있음\" and step6_selections.get(\"p3_16_req_2\") == \"충족\" and step6_selections.get(\"p3_16_req_1\") == \"미충족\" and step6_selections.get(\"p3_16_req_3\") == \"미충족\" and step6_selections.get(\"p3_16_req_4\") == \"미충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -1293,7 +1401,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p3_16",
-        "title_text": "3.2.P.3 제조\n16. 완제의약품 또는 반제품의 제조에 적용되는 공정관리시험 또는 공정관리시험 기준(IPC)의 변경",
+        "title_text": "3.2.P.3 제조\n16. 완제의약품 또는 반제품의 제조에 적용되는 공정관리시험 또는 공정관리시험 기준(IPC)의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p3_16_sub_16e\") == \"변경 있음\" and step6_selections.get(\"p3_16_req_2\") == \"충족\" and step6_selections.get(\"p3_16_req_1\") == \"미충족\" and step6_selections.get(\"p3_16_req_3\") == \"미충족\" and step6_selections.get(\"p3_16_req_4\") == \"미충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -1301,7 +1409,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p4_17",
-        "title_text": "3.2.P.4 첨가제의 관리\n17. 첨가제 기원의 변경",
+        "title_text": "3.2.P.4 첨가제의 관리\n17. 첨가제 기원의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p4_17_sub_17a\") == \"변경 있음\" and step6_selections.get(\"p4_17_req_1\") == \"충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -1309,7 +1417,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p4_17",
-        "title_text": "3.2.P.4 첨가제의 관리\n17. 첨가제 기원의 변경",
+        "title_text": "3.2.P.4 첨가제의 관리\n17. 첨가제 기원의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p4_17_sub_17b\") == \"변경 있음\" and step6_selections.get(\"p4_17_req_1\") == \"미충족\"\n)",
         "output_1_tag": "Cmin",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmin, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Minor change(Cmin)수준의 변경사항입니다.",
@@ -1317,7 +1425,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p4_18",
-        "title_text": "3.2.P.4 첨가제의 관리\n18. 별규에 해당하는 첨가제의 규격 또는 시험방법 변경",
+        "title_text": "3.2.P.4 첨가제의 관리\n18. 별규에 해당하는 첨가제의 규격 또는 시험방법 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p4_18_req_1\") == \"충족\"\n)",
         "output_1_tag": "Cmin",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmin, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Minor change(Cmin)수준의 변경사항입니다.",
@@ -1325,7 +1433,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p4_19",
-        "title_text": "3.2.P.4 첨가제의 관리\n19. 식약처장이 인정하는 공정서 규격으로 첨가제 규격의 변경",
+        "title_text": "3.2.P.4 첨가제의 관리\n19. 식약처장이 인정하는 공정서 규격으로 첨가제 규격의 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p4_19_req_1\") == \"충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -1333,7 +1441,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p7_20",
-        "title_text": "3.2.P.7 용기-마개 시스템\n20. 비무균제제의 직접용기 및 포장 재질, 종류 변경",
+        "title_text": "3.2.P.7 용기-마개 시스템\n20. 비무균제제의 직접용기 및 포장 재질, 종류 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p7_20_req_1\") == \"충족\"\n)",
         "output_1_tag": "IR",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nIR, 시판전보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2제4항 단서조항에 따른 시판전 보고(Immediate Report, IR) 수준의 변경사항입니다.",
@@ -1341,7 +1449,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p7_20",
-        "title_text": "3.2.P.7 용기-마개 시스템\n20. 비무균제제의 직접용기 및 포장 재질, 종류 변경",
+        "title_text": "3.2.P.7 용기-마개 시스템\n20. 비무균제제의 직접용기 및 포장 재질, 종류 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p7_20_req_1\") == \"미충족\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -1349,7 +1457,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p7_21",
-        "title_text": "3.2.P.7 용기-마개 시스템\n21. 무균제제의 직접용기 및 포장 재질, 종류 변경",
+        "title_text": "3.2.P.7 용기-마개 시스템\n21. 무균제제의 직접용기 및 포장 재질, 종류 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p7_21_req_1\") == \"충족\"\n)",
         "output_1_tag": "Cmin",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmin, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Minor change(Cmin)수준의 변경사항입니다.",
@@ -1357,7 +1465,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p7_21",
-        "title_text": "3.2.P.7 용기-마개 시스템\n21. 무균제제의 직접용기 및 포장 재질, 종류 변경",
+        "title_text": "3.2.P.7 용기-마개 시스템\n21. 무균제제의 직접용기 및 포장 재질, 종류 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p7_21_req_1\") == \"미충족\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -1365,7 +1473,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p7_22",
-        "title_text": "3.2.P.7 용기-마개 시스템\n22. 직접 포장의 규격 변경",
+        "title_text": "3.2.P.7 용기-마개 시스템\n22. 직접 포장의 규격 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p7_22_sub_22a\") == \"변경 있음\" and step6_selections.get(\"p7_22_req_1\") == \"충족\" and step6_selections.get(\"p7_22_req_2\") == \"충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -1373,7 +1481,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p7_22",
-        "title_text": "3.2.P.7 용기-마개 시스템\n22. 직접 포장의 규격 변경",
+        "title_text": "3.2.P.7 용기-마개 시스템\n22. 직접 포장의 규격 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p7_22_sub_22b\") == \"변경 있음\" and step6_selections.get(\"p7_22_req_2\") == \"충족\" and step6_selections.get(\"p7_22_req_1\") == \"미충족\"\n)",
         "output_1_tag": "AR",
         "output_1_text": "보고유형은 다음과 같습니다.\n \nAR, 연차보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2 제2항 및 제4항에 따른 연차보고(Annual Report, AR) 수준의 변경사항입니다.",
@@ -1381,7 +1489,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "p7_23",
-        "title_text": "3.2.P.7 용기-마개 시스템\n23. 포장단위 변경",
+        "title_text": "3.2.P.7 용기-마개 시스템\n23. 포장단위 변경\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"p7_23_req_1\") == \"충족\" and step6_selections.get(\"p7_23_req_2\") == \"충족\"\n)",
         "output_1_tag": "IR",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nIR, 시판전보고\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2제4항 단서조항에 따른 시판전 보고(Immediate Report, IR) 수준의 변경사항입니다.",
@@ -1389,7 +1497,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "ds_24",
-        "title_text": "디자인스페이스(Design Space) 변경\n24. 새로운 디자인스페이스 도입 또는 허가된 디자인스페이스의 확장",
+        "title_text": "디자인스페이스(Design Space) 변경\n24. 새로운 디자인스페이스 도입 또는 허가된 디자인스페이스의 확장\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"ds_24_sub_24a\") == \"변경 있음\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -1397,7 +1505,7 @@ STEP7_ROWS = [
     },
     {
         "title_key": "ds_24",
-        "title_text": "디자인스페이스(Design Space) 변경\n24. 새로운 디자인스페이스 도입 또는 허가된 디자인스페이스의 확장",
+        "title_text": "디자인스페이스(Design Space) 변경\n24. 새로운 디자인스페이스 도입 또는 허가된 디자인스페이스의 확장\n",
         "output_condition_all_met": "(\n    step6_selections.get(\"ds_24_sub_24b\") == \"변경 있음\"\n)",
         "output_1_tag": "Cmaj",
         "output_1_text": "보고유형은 다음과 같습니다.\n\nCmaj, 변경허가(신고)\n「의약품의 품목허가‧신고‧심사 규정」 제3조의2(의약품의 허가‧신고의 변경 처리) 및 제6조(국제공통기술문서 작성)에 따라 원료의약품과 완제의약품의 제조원 또는 제조방법 중 품질에 중요한 영향을 미치는 변경허가(신고) 신청(Change, C) 대상에 해당하며, 변경사항의 중요도, 충족조건 및 제출자료 요건의 난이도 등을 고려하였을 때 Major change(Cmaj)수준의 변경사항입니다.",
@@ -1466,11 +1574,11 @@ if st.session_state.step == 7:
 
             box_html = f"""
             <div style='background-color:#FFFFF0;padding:10px;margin-bottom:20px;'>
-                <p style='font-weight:bold;font-size:22pt;margin:0;'>{first_line}</p>
-                <p style='font-weight:bold;font-size:18pt;margin:0;'>{second_line}</p>
-                <p style='font-size:16pt;margin:0;'>{tag}</p>
-                <p style='font-size:16pt;margin:0;'>{html_output1}</p>
-                <p style='font-size:16pt;margin:0;'>{html_output2}</p>
+                <p style='font-weight:bold;font-size:15pt;margin:0;'>{first_line}</p>
+                <p style='font-weight:bold;font-size:13pt;margin:0;'>{second_line}</p>
+                <p style='font-size:11pt;margin:0;'>{tag}</p>
+                <p style='font-size:11pt;margin:0;'>{html_output1}</p>
+                <p style='font-size:11pt;margin:0;'>{html_output2}</p>
             </div>
             """
             st.markdown(box_html, unsafe_allow_html=True)
