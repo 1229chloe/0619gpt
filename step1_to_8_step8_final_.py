@@ -1581,6 +1581,13 @@ if st.session_state.step == 8:
     page = st.session_state.step8_page
     total_pages = len(page_list)
     current_key, current_idx = page_list[page]
+
+    result = None
+    requirements = {}
+    selections = {}
+    output2_text_list = []
+    show_table = False
+
     # Render message when there is no matching result for this page
     if current_idx is None:
         st.write(
@@ -1590,13 +1597,14 @@ if st.session_state.step == 8:
         )
     else:
         result = step7_results[current_key][current_idx]
-        if not (result.get("output_1_tag") or "").strip() and not (result.get("output_2_text") or "").strip():
+        if not ((result.get("output_1_tag") or "").strip() or (result.get("output_2_text") or "").strip()):            
             st.write(
                 "해당 변경사항에 대한 충족조건을 고려하였을 때,\n"
                 "「의약품 허가 후 제조방법 변경관리 가이드라인」에서 제시하고 있는\n"
                 "범위에 해당하지 않는 것으로 확인됩니다."
             )
         else:
+            show_table = True
             requirements = step6_items.get(current_key, {}).get("requirements", {})
 
             selections = {
@@ -1630,8 +1638,9 @@ if st.session_state.step == 8:
                     file_name=f"신청서_{current_key}_{current_idx}.docx",
                 )
             os.remove(file_path)
-                
 
+
+    if show_table:
         st.markdown(
             "<h5 style='text-align:center'>[붙임] 신청양식「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」</h5>",
             unsafe_allow_html=True,
@@ -1642,7 +1651,7 @@ if st.session_state.step == 8:
             .replace("\\n", "<br>")
             .replace("\n", "<br>")
         )
-        
+
         html = textwrap.dedent(
             f"""
 <style>
