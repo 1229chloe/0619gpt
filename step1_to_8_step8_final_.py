@@ -1702,9 +1702,6 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     set_cell_font(sub_row.cells[4], 11, bold=True)
 
     # 4. 충족조건 내용 채우기 (rows 6-10 default)
-    req_items = list(requirements.items())
-    max_reqs = max(3, len(req_items))
-    extra_reqs = max(0, max_reqs - 4)
     for i in range(extra_reqs):
         new_row = clone_row(table, 10 + i)
         for cell in new_row.cells:
@@ -1723,7 +1720,6 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         set_cell_font(table.cell(row, 4), 11)
 
     # 5. 필요서류: rows 12-18 available
-    doc_start = 12 + extra_reqs
     max_docs = max(3, len(output2_text_list))
     extra_docs = max(0, max_docs - 7)
     # Clone additional 필요서류 행 (row 18 기준)
