@@ -6,6 +6,9 @@ from tempfile import NamedTemporaryFile
 import os
 import textwrap
 import re
+from pathlib import Path
+
+TEMPLATE_PATH = Path(__file__).resolve().parent / "제조방법변경 신청양식_empty_.docx"
 
 
 # ===== 초기 상태 정의 =====
@@ -1426,7 +1429,7 @@ def requirement_symbol(title_key, req_key, selections):
     
 def create_application_docx(current_key, result, requirements, selections, output2_text_list, file_path):
     # Load template to preserve all styles and merges
-    doc = Document('제조방법변경 신청양식_empty_.docx')
+    doc = Document(str(TEMPLATE_PATH))
     table = doc.tables[0]
 
     # Ensure header cells use 12pt font
@@ -1626,7 +1629,7 @@ if st.session_state.step == 8:
                     file_bytes,
                     file_name=f"신청서_{current_key}_{current_idx}.docx",
                 )
-        os.remove(file_path)
+            os.remove(file_path)
                 
 
         st.markdown(
