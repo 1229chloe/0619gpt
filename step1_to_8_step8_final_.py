@@ -1587,42 +1587,42 @@ if st.session_state.step == 8:
         else:
             requirements = step6_items.get(current_key, {}).get("requirements", {})
 
-        selections = {
-            f"{current_key}_req_{rk}": step6_selections.get(f"{current_key}_req_{rk}", "")
-            for rk in requirements
-        }
-        output2_text_list = [line.strip() for line in result.get("output_2_text", "").split("\n") if line.strip()]
-        if output2_text_list and "필요서류" in output2_text_list[0]:
-            output2_text_list = output2_text_list[1:]
-        with NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
-            file_path = tmp.name
-            create_application_docx(
-                current_key,
-                result,
-                requirements,
-                selections,
-                output2_text_list,
-                file_path,
+            selections = {
+                f"{current_key}_req_{rk}": step6_selections.get(f"{current_key}_req_{rk}", "")
+                for rk in requirements
+            }
+            output2_text_list = [line.strip() for line in result.get("output_2_text", "").split("\n") if line.strip()]
+            if output2_text_list and "필요서류" in output2_text_list[0]:
+                output2_text_list = output2_text_list[1:]
+            with NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
+                file_path = tmp.name
+                create_application_docx(
+                    current_key,
+                    result,
+                    requirements,
+                    selections,
+                    output2_text_list,
+                    file_path,
+                )
+
+            with open(file_path, "rb") as f:
+                file_bytes = f.read()
+
+            col_left, _ = st.columns(2)
+            with col_left:
+                st.download_button(
+                    "📄 파일 다운로드",
+                    file_bytes,
+                    file_name=f"신청서_{current_key}_{current_idx}.docx",
+                )
+            os.remove(file_path)
+
+            st.markdown(
+                "<h5 style='text-align:center'>[붙임] 신청양식「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」</h5>",
+                unsafe_allow_html=True,
             )
 
-        with open(file_path, "rb") as f:
-            file_bytes = f.read()
-    
-        col_left, _ = st.columns(2)
-        with col_left:
-            st.download_button(
-                "📄 파일 다운로드",
-                file_bytes,
-                file_name=f"신청서_{current_key}_{current_idx}.docx",
-            )
-        os.remove(file_path)
-                
-        st.markdown(
-            "<h5 style='text-align:center'>[붙임] 신청양식「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」</h5>",
-            unsafe_allow_html=True,
-        )
-        
-        html = textwrap.dedent(
+            html = textwrap.dedent(
             f"""
 <style>
 table {{ border-collapse: collapse; width: 100%; font-family: 'Nanum Gothic', sans-serif; }}
