@@ -1641,7 +1641,7 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
     <td colspan='3' style='width:55%'></td>
   </tr>
   <tr>
-    <td class='normal' style='width:22%'>제조소(영업소) 명칭</td>
+    <td class='normal' style='width:22%'>변경신청 제품명</td>
     <td colspan='3' style='width:55%'></td>
   </tr>
   <tr>
