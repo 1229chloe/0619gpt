@@ -2,12 +2,12 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>신청양식 표</title>
+<title>제조방법변경 신청서</title>
 <style>
- table { border-collapse: collapse; width: 100%; font-family: 'Malgun Gothic', sans-serif; }
- td { border: 1px solid #000; padding: 4px; }
- .title { font-weight: bold; font-size: 12pt; }
- .normal { font-size: 11pt; }
+table { border-collapse: collapse; width: 100%; font-family: 'Malgun Gothic', sans-serif; }
+td { border: 1px solid #000; padding: 4px; }
+.title { font-weight: bold; font-size: 12pt; }
+.normal { font-size: 11pt; }
 </style>
 </head>
 <body>
@@ -37,66 +37,38 @@
     <td class="title" colspan="3">4. 충족조건</td>
     <td class="title" colspan="2">조건 충족 여부(○, X 중 선택)</td>
   </tr>
+  <!-- 자동화 반복: 최소 3행, 데이터 많으면 자동 행수 확장 -->
+  {% for row in satisfaction_conditions %}
+  <tr>
+    <td colspan="3" class="normal">{{ row.condition }}</td>
+    <td colspan="2" class="normal">{{ row.result }}</td>
+  </tr>
+  {% endfor %}
+  {% for i in range(3 - satisfaction_conditions|length) %}
   <tr>
     <td colspan="3" class="normal"></td>
     <td colspan="2" class="normal"></td>
   </tr>
-  <tr>
-    <td colspan="3" class="normal"></td>
-    <td colspan="2" class="normal"></td>
-  </tr>
-  <tr>
-    <td colspan="3" class="normal"></td>
-    <td colspan="2" class="normal"></td>
-  </tr>
-  <tr>
-    <td colspan="3" class="normal"></td>
-    <td colspan="2" class="normal"></td>
-  </tr>
-  <tr>
-    <td colspan="3" class="normal"></td>
-    <td colspan="2" class="normal"></td>
-  </tr>
+  {% endfor %}
   <tr>
     <td class="title" colspan="3">5. 필요서류 (해당하는 필요서류 기재)</td>
     <td class="title" style="width:8%">구비 여부<br>(○, X 중 선택)</td>
     <td class="title" style="width:13%">해당 페이지 표시</td>
   </tr>
+  {% for row in required_documents %}
+  <tr>
+    <td colspan="3" class="normal">{{ row.document }}</td>
+    <td class="normal">{{ row.status }}</td>
+    <td class="normal">{{ row.page }}</td>
+  </tr>
+  {% endfor %}
+  {% for i in range(3 - required_documents|length) %}
   <tr>
     <td colspan="3" class="normal"></td>
     <td class="normal"></td>
     <td class="normal"></td>
   </tr>
-  <tr>
-    <td colspan="3" class="normal"></td>
-    <td class="normal"></td>
-    <td class="normal"></td>
-  </tr>
-  <tr>
-    <td colspan="3" class="normal"></td>
-    <td class="normal"></td>
-    <td class="normal"></td>
-  </tr>
-  <tr>
-    <td colspan="3" class="normal"></td>
-    <td class="normal"></td>
-    <td class="normal"></td>
-  </tr>
-  <tr>
-    <td colspan="3" class="normal"></td>
-    <td class="normal"></td>
-    <td class="normal"></td>
-  </tr>
-  <tr>
-    <td colspan="3" class="normal"></td>
-    <td class="normal"></td>
-    <td class="normal"></td>
-  </tr>
-  <tr>
-    <td colspan="3" class="normal"></td>
-    <td class="normal"></td>
-    <td class="normal"></td>
-  </tr>
+  {% endfor %}
 </table>
 </body>
 </html>
