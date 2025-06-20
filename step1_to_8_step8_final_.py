@@ -9,6 +9,13 @@ import re
 BASE_DIR = os.path.dirname(__file__)
 
 
+def render_step_title(num):
+    st.markdown(
+        f"<h2 style='font-size:24px; white-space:nowrap;'>「의약품 허가 후 제조방법 변경관리 가이드라인」의 적용 대상 확인 {num}</h2>",
+        unsafe_allow_html=True,
+    )
+
+
 # ===== 초기 상태 정의 =====
 if "step" not in st.session_state:
     st.session_state.step = 1
@@ -32,7 +39,7 @@ def go_to_step2():
         st.session_state.step = 2
 
 if st.session_state.step == 1:
-    st.markdown("## Step 1")
+    render_step_title(1)
     st.write("제6조제1항에 따라 국제공통기술문서(CTD)로 작성하여 허가를 받거나 신고한 의약품의 제조원 또는 제조방법을 변경하는 경우에 해당한다.")
 
     st.session_state.step1_answer = st.radio("답변을 선택하세요.", ["예", "아니오"], key="step1_radio")
@@ -53,7 +60,7 @@ def go_to_step3():
         st.session_state.step = 3
 
 if st.session_state.step == 2:
-    st.markdown("## Step 2")
+    render_step_title(2)
     st.write("제조에 관한 항목 (CTD 제3부 품질평가 자료 중 3.2.S.2, 3.2.S.3 및 3.2.P.2, 3.2.P.3, 3.2.P.4, 3.2.P.7)을 변경 하는 경우에 해당한다.")
 
     st.session_state.step2_answer = st.radio("답변을 선택하세요.", ["예", "아니오"], key="step2_radio")
@@ -76,7 +83,7 @@ def go_to_step4():
         st.session_state.step = 4
 
 if st.session_state.step == 3:
-    st.markdown("## Step 3")
+    render_step_title(3)
     st.write("품목의 허가(신고) 사항 중 제조방법에 해당하는 자료(CTD 제3부 품질평가 자료 중 3.2.S.2, 3.2.S.3 및 3.2.P.2, 3.2.P.3, 3.2.P.4, 3.2.P.7)를 국제공통기술문서(CTD)로서 제출하여 심사받은 ‘제조방법 CTD 적용(또는 전환)’ 품목에 해당한다.")
 
     st.session_state.step3_answer = st.radio("답변을 선택하세요.", ["예", "아니오"], key="step3_radio")
@@ -134,46 +141,81 @@ def go_back_to_step3():
 
 # Step 4 실행
 if st.session_state.step == 4:
-    st.markdown("## Step 4")
-    st.write("Step 4. 변경사항에 해당하는 항목을 선택하세요.")
+    indent = "&nbsp;" * 4
+    st.markdown(
+        "<h2 style='font-size:24px;'>가이드라인에 명시한 변경사항의 CTD 항목 선택</h2>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f"<p style='font-size:16px;'>※ 가이드라인에 명시한 CTD 항목은 대표적인 번호를 기재한 것으로,제출시 CTD 작성지침에<br>{indent} 맞게 작성하여야 합니다</p>",
+        unsafe_allow_html=True,
+    )
 
-    st.markdown("#### 3.2.S 원료의약품")
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stRadio"] > label p {
+            font-size:20px;
+            margin-bottom:0;
+        }
+        div[data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {
+            font-size:16px;
+            margin-top:0;
+            margin-bottom:0;
+        }
+        div[data-testid="stMarkdownContainer"] p {
+            margin-top:0;
+            margin-bottom:0;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("<h4 style='font-size:18px;'>3.2.S 원료의약품</h4>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:16px;'>3.2.S.1 일반정보</p>", unsafe_allow_html=True)    
     st.session_state.step4_selections["s1"] = st.radio(
-        "3.2.S.1 일반정보",
+        "",
         ["변경 있음", "변경 없음"],
         key="step4_radio_s1"
     )
+    st.markdown("<p style='font-size:16px;'>3.2.S.2 제조</p>", unsafe_allow_html=True)
     st.session_state.step4_selections["s2"] = st.radio(
-        "3.2.S.2 제조",
+        "",
         ["변경 있음", "변경 없음"],
         key="step4_radio_s2"
     )
 
-    st.markdown("#### 3.2.P 완제의약품")
+    st.markdown("<h4 style='font-size:18px;'>3.2.P 완제의약품</h4>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:16px;'>3.2.P.1 완제의약품의 성상 및 조성</p>", unsafe_allow_html=True)
     st.session_state.step4_selections["p1"] = st.radio(
-        "3.2.P.1 완제의약품의 성상 및 조성",
+        "",
         ["변경 있음", "변경 없음"],
         key="step4_radio_p1"
     )
+    st.markdown("<p style='font-size:16px;'>3.2.P.3 제조</p>", unsafe_allow_html=True)
     st.session_state.step4_selections["p3"] = st.radio(
-        "3.2.P.3 제조",
+        "",
         ["변경 있음", "변경 없음"],
         key="step4_radio_p3"
     )
+    st.markdown("<p style='font-size:16px;'>3.2.P.4 첨가제의 관리</p>", unsafe_allow_html=True)
     st.session_state.step4_selections["p4"] = st.radio(
-        "3.2.P.4 첨가제의 관리",
+        "",
         ["변경 있음", "변경 없음"],
         key="step4_radio_p4"
     )
+    st.markdown("<p style='font-size:16px;'>3.2.P.7 용기-마개 시스템</p>", unsafe_allow_html=True)
     st.session_state.step4_selections["p7"] = st.radio(
-        "3.2.P.7 용기-마개 시스템",
+        "",
         ["변경 있음", "변경 없음"],
         key="step4_radio_p7"
     )
 
-    st.markdown("#### 디자인스페이스")
+    st.markdown("<h4 style='font-size:18px;'>디자인스페이스</h4>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:16px;'>디자인스페이스(Design Space)</p>", unsafe_allow_html=True)
     st.session_state.step4_selections["ds"] = st.radio(
-        "디자인스페이스(Design Space)",
+        "",
         ["변경 있음", "변경 없음"],
         key="step4_radio_ds"
     )
