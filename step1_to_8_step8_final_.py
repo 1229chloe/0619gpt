@@ -1721,7 +1721,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     # 4. 충족조건 헤더 설정
     # 템플릿의 행 5를 사용하여 "4. 충족조건"과 "조건 충족 여부(○, X 중 선택)"를 표시
     sub_row = table.rows[5]
-    sub_row.cells[0].text = "4. 충족조건"
+    set_cell_text_with_breaks(sub_row.cells[0], "4. 충족조건")
     set_cell_font(sub_row.cells[0], 11, bold=True)
     for c in [1, 2, 3]:
         sub_row.cells[c].text = ""
