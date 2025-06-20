@@ -778,7 +778,7 @@ if st.session_state.step == 6:
             # 충족요건
             for req_key, req_text in block.get("requirements", {}).items():
                 full_key = f"{current_key}_req_{req_key}"
-                label = f"{req_key}. {req_text}"
+                label = req_text
                 st.session_state.step6_selections[full_key] = st.radio(
                     label,
                     ["충족", "미충족"],
@@ -1413,7 +1413,10 @@ for idx, row in enumerate(STEP7_ROWS):
 # ===== Step7 화면 =====
 if st.session_state.step == 7:
     current_key = st.session_state.step6_targets[st.session_state.step7_page]
-    st.markdown("## 제조방법 변경에 따른 필요서류 및 보고유형")
+    st.markdown(
+        "<h2 style='font-size:24px;'>제조방법 변경에 따른 필요서류 및 보고유형</h2>",
+        unsafe_allow_html=True,
+    )
     
     # title 줄바꿈 처리: \n 또는 \\n → <br> 변환
     st.markdown(
@@ -1445,23 +1448,32 @@ if st.session_state.step == 7:
 
     if visible_results:
         for tag, output1, output2 in visible_results:
-            st.session_state.step7_results[current_key].append(
-                {
-                    "title_text": step6_items[current_key]["title"],
-                    "output_1_tag": tag,
-                    "output_1_text": output1,
-                    "output_2_text": output2,
-                }
-            )
-            # STEP7_ROWS constants use "\\n" for line breaks. Convert these
-            # sequences to HTML <br> tags so Streamlit properly renders the
-            # intended newlines.
-            st.markdown(
-                output1.replace("\\n", "<br>").replace("\n", "<br>"),
-                unsafe_allow_html=True,
-            )
-            # Also normalise output2 line breaks for the text display
-            st.text(output2.replace("\\n", "\n"))
+            entry = {
+                "title_text": step6_items[current_key]["title"],
+                "output_1_tag": tag,
+                "output_1_text": output1,
+                "output_2_text": output2,
+            }
+            st.session_state.step7_results[current_key].append(entry)
+
+            title = entry["title_text"].replace("\\n", "\n")
+            line_parts = title.split("\n", 1)
+            first_line = line_parts[0]
+            second_line = line_parts[1] if len(line_parts) > 1 else ""
+
+            html_output1 = output1.replace("\\n", "<br>").replace("\n", "<br>")
+            html_output2 = output2.replace("\\n", "<br>").replace("\n", "<br>")
+
+            box_html = f"""
+            <div style='background-color:#FFFFF0;padding:10px;margin-bottom:20px;'>
+                <p style='font-weight:bold;font-size:22pt;margin:0;'>{first_line}</p>
+                <p style='font-weight:bold;font-size:18pt;margin:0;'>{second_line}</p>
+                <p style='font-size:16pt;margin:0;'>{tag}</p>
+                <p style='font-size:16pt;margin:0;'>{html_output1}</p>
+                <p style='font-size:16pt;margin:0;'>{html_output2}</p>
+            </div>
+            """
+            st.markdown(box_html, unsafe_allow_html=True)
 
     else:
         st.write(
