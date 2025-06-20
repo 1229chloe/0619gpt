@@ -1615,14 +1615,21 @@ if st.session_state.step == 8:
                     file_bytes,
                     file_name=f"신청서_{current_key}_{current_idx}.docx",
                 )
-            os.remove(file_path)
+        os.remove(file_path)
+                
 
-            st.markdown(
-                "<h5 style='text-align:center'>[붙임] 신청양식「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」</h5>",
-                unsafe_allow_html=True,
-            )
+        st.markdown(
+            "<h5 style='text-align:center'>[붙임] 신청양식「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」</h5>",
+            unsafe_allow_html=True,
+        )
 
-            html = textwrap.dedent(
+        title_html = (
+            result["title_text"]
+            .replace("\\n", "<br>")
+            .replace("\n", "<br>")
+        )
+        
+        html = textwrap.dedent(
             f"""
 <style>
 table {{ border-collapse: collapse; width: 100%; font-family: 'Nanum Gothic', sans-serif; }}
@@ -1648,10 +1655,10 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
     <td class='title' colspan='2' style='width:45%'>2. 변경유형</td>
     <td class='title' colspan='3' style='width:55%'>3. 신청 유형(AR, IR, Cmin, Cmaj 중 선택)</td>
   </tr>
-  <tr>
-    <td colspan='2' class='normal' style='width:45%'>{result["title_text"]}</td>
-    <td colspan='3' class='normal' style='width:55%'>{result["output_1_tag"]}</td>
-  </tr>
+    <tr>
+      <td colspan='2' class='normal' style='width:45%'>{title_html}</td>
+      <td colspan='3' class='normal' style='width:55%'>{result["output_1_tag"]}</td>
+    </tr>
   <tr><td colspan='3' class='normal' style='width:60%;font-weight:bold'>4. 충족조건</td><td colspan='2' class='normal' style='width:40%;font-weight:bold'>조건 충족 여부(○, X 중 선택)</td></tr>
 """
         )
