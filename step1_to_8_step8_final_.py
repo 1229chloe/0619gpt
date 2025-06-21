@@ -1,6 +1,8 @@
 import streamlit as st
 from docx import Document
 from docx.shared import Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
 from copy import deepcopy
 from tempfile import NamedTemporaryFile
 import os
@@ -1575,6 +1577,10 @@ if st.session_state.step == 7:
             second_line = line_parts[1] if len(line_parts) > 1 else ""
 
             html_output1 = output1.replace("\\n", "<br>").replace("\n", "<br>")
+            html_output1 = html_output1.replace(
+                "보고유형은 다음과 같습니다.",
+                "<strong>보고유형은 다음과 같습니다.</strong>",
+            )            
             lines = output2.split("\n")
             formatted_lines = []
             if lines:
@@ -1590,8 +1596,20 @@ if st.session_state.step == 7:
                         )
                     else:
                         formatted_lines.append(line)
-            html_output2 = "<br>".join(formatted_lines)
-            
+
+            non_empty = [line for line in formatted_lines if line]
+
+            if non_empty:
+                html_output2 = non_empty[0]
+                if len(non_empty) > 1:
+                    html_output2 += "<br><br>" + "<br>".join(non_empty[1:])
+            else:
+                html_output2 = ""
+            html_output2 = html_output2.replace(
+                "필요서류는 다음과 같습니다.",
+                "<strong>필요서류는 다음과 같습니다.</strong>",
+            )
+
             box_html = f"""
             <div style='background-color:#FFFFF0;padding:10px;margin-bottom:20px;'>
                 <p style='font-weight:bold;font-size:15pt;margin:0;'>{first_line}</p>
@@ -1627,17 +1645,49 @@ if st.session_state.step == 7:
         else:
             st.button("다음단계로", on_click=go_next_step7_page)
 
-# ===== Step8: 신청양식 DOCX 생성 =====
+# ===== Step8: [붙임] 신청양식「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」 DOCX 생성 =====
 
 def set_cell_font(cell, font_size=11, bold=False):
     for paragraph in cell.paragraphs:
+        if not paragraph.runs:
+            paragraph.add_run("")
         for run in paragraph.runs:
             run.font.size = Pt(font_size)
             run.font.bold = bold
+            run.font.name = "Noto Serif KR"
+            run._element.rPr.rFonts.set(qn("w:eastAsia"), "Noto Serif KR")
         paragraph.paragraph_format.line_spacing = 1.4
 
-def set_cell_text_with_breaks(cell, text):
-    """Set cell text with line breaks preserved."""
+def apply_document_font(doc, font_name="Noto Serif KR"):
+    """Ensure every run in the document uses the specified font."""
+    for paragraph in doc.paragraphs:
+        for run in paragraph.runs:
+            run.font.name = font_name
+            run._element.rPr.rFonts.set(qn("w:eastAsia"), font_name)
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.font.name = font_name
+                        run._element.rPr.rFonts.set(qn("w:eastAsia"), font_name)
+
+def apply_document_font(doc, font_name="Noto Serif KR"):
+    """Ensure every run in the document uses the specified font."""
+    for paragraph in doc.paragraphs:
+        for run in paragraph.runs:
+            run.font.name = font_name
+            run._element.rPr.rFonts.set(qn("w:eastAsia"), font_name)
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.font.name = font_name
+                        run._element.rPr.rFonts.set(qn("w:eastAsia"), font_name)
+
+def set_cell_text_with_breaks(cell, text, font_size=None, bold=False, font_name="Noto Serif KR"):
+    """Set cell text with line breaks preserved and optional font settings."""
     cell.text = ""
     p = cell.paragraphs[0]
     p.text = ""
@@ -1645,7 +1695,12 @@ def set_cell_text_with_breaks(cell, text):
     for i, line in enumerate(lines):
         if i > 0:
             p.add_run().add_break()
-        p.add_run(line)
+        run = p.add_run(line)
+        if font_size is not None:
+            run.font.size = Pt(font_size)
+        run.font.bold = bold
+        run.font.name = font_name
+        run._element.rPr.rFonts.set(qn("w:eastAsia"), font_name)        
 
 def clone_row(table, row_idx):
     """Clone table row at row_idx and insert below it."""
@@ -1658,10 +1713,16 @@ def clone_row(table, row_idx):
         set_cell_font(cell, 11)
     return new_row
 
+def delete_row(table, row_idx):
+    """Remove table row at row_idx."""
+    tbl = table._tbl
+    tr = table.rows[row_idx]._tr
+    tbl.remove(tr)
+
 def requirement_symbol(title_key, req_key, selections):
     state = selections.get(f"{title_key}_req_{req_key}", "")
     if state == "충족":
-        return "○"
+        return "O"
     if state == "미충족":
         return "X"
     return ""
@@ -1669,10 +1730,21 @@ def requirement_symbol(title_key, req_key, selections):
 def create_application_docx(current_key, result, requirements, selections, output2_text_list, file_path):
     # Load template to preserve all styles and merges
     template_path = os.path.join(BASE_DIR, "제조방법변경 신청양식_empty_.docx")
-    doc = Document(template_path)    
+    doc = Document(template_path)
+
+    # Update the title paragraph to reflect the guideline name
+    title = "[붙임] 신청양식「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」"
+    p = doc.paragraphs[0]
+    p.clear()
+    run = p.add_run(title)
+    run.font.size = Pt(13)
+    run.font.bold = True
+    run.font.name = "Noto Serif KR"
+    run._element.rPr.rFonts.set(qn("w:eastAsia"), "Noto Serif KR")
+
     table = doc.tables[0]
 
-    # Ensure header cells use 12pt font
+    # Ensure header cells use 12pt bold font
     header_cells = [
         (0, 0),
         (3, 0), (3, 1), (3, 2), (3, 3), (3, 4),
@@ -1692,8 +1764,29 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         r_idx = r
         if r >= 11:
             r_idx += extra_reqs
-        set_cell_font(table.cell(r_idx, c), 12)
-        
+        set_cell_font(table.cell(r_idx, c), 12, bold=True)
+
+    # Explicitly set "5. 필요서류" header texts to ensure uniform symbols
+    doc_header = table.rows[11 + extra_reqs]
+    set_cell_text_with_breaks(
+        doc_header.cells[0],
+        "5. 필요서류 (해당하는 필요서류 기재)",
+        font_size=12,
+        bold=True,
+    )
+    set_cell_text_with_breaks(
+        doc_header.cells[3],
+        "구비 여부\n(O, X 선택)",
+        font_size=12,
+        bold=True,
+    )
+    doc_header.cells[3].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    set_cell_text_with_breaks(
+        doc_header.cells[4],
+        "해당 페이지 표시",
+        font_size=12,
+        bold=True,
+    )
 
     # 1. 신청인: template rows 0-2, columns 2-4 hold the value area
     for r_idx, key in enumerate(["name", "site", "product"]):
@@ -1711,28 +1804,30 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     # index individually overwrites the merged cell contents. Write only once
     # to each unique cell to preserve the correct values.
     change_cell = table.cell(4, 0)
-    set_cell_text_with_breaks(change_cell, change_text)
+    set_cell_text_with_breaks(change_cell, change_text, font_size=11)
     set_cell_font(change_cell, 11)
 
     apply_cell = table.cell(4, 4)
     apply_cell.text = apply_text
+    apply_cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
     set_cell_font(apply_cell, 11)
         
     # 4. 충족조건 헤더 설정
-    # 템플릿의 행 5를 사용하여 "4. 충족조건"과 "조건 충족 여부(○, X 중 선택)"를 표시
+    # 템플릿의 행 5를 사용하여 "4. 충족조건"과 "조건 충족 여부(O, X 선택)"를 표시
     sub_row = table.rows[5]
-    set_cell_text_with_breaks(sub_row.cells[0], "4. 충족조건")
-    set_cell_font(sub_row.cells[0], 11, bold=True)
-    for c in [1, 2, 3]:
-        sub_row.cells[c].text = ""
-        set_cell_font(sub_row.cells[c], 11)
-    set_cell_text_with_breaks(sub_row.cells[4], "조건 충족 여부\n(○, X 중 선택)")
-    set_cell_font(sub_row.cells[4], 11, bold=True)
+    sub_row.cells[0].text = "4. 충족조건"
+    set_cell_font(sub_row.cells[0], 12, bold=True)
+    # row 5 columns 0-3 are merged in the template. Writing to cell(5,0)
+    # populates the entire merged cell. Avoid resetting cells 1-3 which would
+    # overwrite the merged content and remove the text.
+    set_cell_text_with_breaks(sub_row.cells[4], "조건 충족 여부\n(O, X 선택)", font_size=12, bold=True)
+    sub_row.cells[4].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    # 4. 충족조건 내용 채우기 (rows 6-10 default)
+    # 4. 충족조건 내용 채우기 (rows 6-10 default in template)
     req_items = list(requirements.items())
     max_reqs = max(3, len(req_items))
-    extra_reqs = max(0, max_reqs - 4)
+    base_req_rows = 5
+    extra_reqs = max(0, max_reqs - base_req_rows)
     for i in range(extra_reqs):
         new_row = clone_row(table, 10 + i)
         for cell in new_row.cells:
@@ -1748,15 +1843,22 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         table.cell(row, 0).text = text
         set_cell_font(table.cell(row, 0), 11)
         table.cell(row, 4).text = symbol
+        table.cell(row, 4).paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
         set_cell_font(table.cell(row, 4), 11)
 
-    # 5. 필요서류: rows 12-18 available
-    doc_start = 12 + extra_reqs
+    # Remove unused requirement rows if fewer than template defaults
+    if max_reqs < base_req_rows:
+        for i in range(base_req_rows - max_reqs):
+            delete_row(table, 10 - i)
+
+    # 5. 필요서류: rows 12-18 available in template
+    doc_start = 12 + extra_reqs - max(0, base_req_rows - max_reqs)
     max_docs = max(3, len(output2_text_list))
-    extra_docs = max(0, max_docs - 7)
+    base_doc_rows = 7
+    extra_docs = max(0, max_docs - base_doc_rows)
     # Clone additional 필요서류 행 (row 18 기준)
     for i in range(extra_docs):
-        new_row = clone_row(table, 18 + extra_reqs + i)
+        new_row = clone_row(table, doc_start + base_doc_rows - 1 + i)
         for cell in new_row.cells:
             set_cell_font(cell, 11)
     for i in range(max_docs):
@@ -1764,18 +1866,29 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         line = output2_text_list[i] if i < len(output2_text_list) else ""
         for c in [0, 1, 2]:
             cell = table.cell(row, c)
-            cell.text = line
+            cell.text = ""
+            p = cell.paragraphs[0]
+            run = p.add_run(line)
             set_cell_font(cell, 11)
-        cell = table.cell(row, 3)
-        cell.text = ""
-        set_cell_font(cell, 11)
-        cell = table.cell(row, 4)
-        cell.text = ""
-        set_cell_font(cell, 11)
+            if re.match(r"^\d+\.", line.strip()):
+                p.paragraph_format.left_indent = Pt(18)
+                p.paragraph_format.first_line_indent = Pt(-18)
+            else:
+                p.paragraph_format.left_indent = None
+                p.paragraph_format.first_line_indent = None
+        table.cell(row, 3).text = ""
+        set_cell_font(table.cell(row, 3), 11)
+        table.cell(row, 4).text = ""
+        set_cell_font(table.cell(row, 4), 11)
 
+    # Remove unused 필요서류 rows
+    if max_docs < base_doc_rows:
+        for i in range(base_doc_rows - max_docs):
+            delete_row(table, doc_start + base_doc_rows + extra_docs - 1 - i)
+
+    apply_document_font(doc, "Noto Serif KR")
     doc.save(file_path)
     return file_path
-
 
 # Step 8 begins
 if st.session_state.step == 8:
@@ -1894,13 +2007,13 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
   </tr>
   <tr>
     <td class='title' colspan='2' style='width:45%;background-color:#FAF3DB;'>2. 변경유형</td>
-    <td class='title' colspan='3' style='width:55%;background-color:#FAF3DB;'>3. 신청 유형(AR, IR, Cmin, Cmaj 중 선택)</td>
+    <td class='title' colspan='3' style='width:55%;background-color:#FAF3DB;'>3. 신청 유형(AR, IR, Cmin, Cmaj 선택)</td>
   </tr>
   <tr>
     <td colspan='2' class='normal' style='width:45%'>{title_html}</td>
     <td colspan='3' class='normal' style='width:55%'>{result["output_1_tag"]}</td>
   </tr>
-  <tr><td colspan='3' class='normal' style='width:60%;font-weight:bold;background-color:#FAF3DB;'>4. 충족조건</td><td colspan='2' class='normal' style='width:40%;font-weight:bold;background-color:#FAF3DB;'>조건 충족 여부(○, X 중 선택)</td></tr>
+  <tr><td colspan='3' class='normal' style='width:60%;font-weight:bold;background-color:#FAF3DB;'>4. 충족조건</td><td colspan='2' class='normal' style='width:40%;font-weight:bold;background-color:#FAF3DB;'>조건 충족 여부(O, X 선택)</td></tr>
 """
         )
 
@@ -1928,7 +2041,7 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
                 """
   <tr>
     <td class='title' colspan='3' style='width:60%;background-color:#FAF3DB;'>5. 필요서류 (해당하는 필요서류 기재)</td>
-    <td class='title' style='width:19%;background-color:#FAF3DB;'>구비 여부<br>(○, X 중 선택)</td>
+    <td class='title' style='width:19%;background-color:#FAF3DB;'>구비 여부<br>(O, X 선택)</td>
     <td class='title' style='width:21%;background-color:#FAF3DB;'>해당 페이지 표시</td>
   </tr>
 """
