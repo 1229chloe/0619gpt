@@ -2,6 +2,7 @@ import streamlit as st
 from docx import Document
 from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_ALIGN_VERTICAL
 from docx.oxml.ns import qn
 from copy import deepcopy
 from tempfile import NamedTemporaryFile
@@ -352,7 +353,7 @@ def go_to_next_step5_page():
 # ===== Step5 화면 =====
 if st.session_state.step == 5:
     st.markdown(
-        "<h2 style='font-size:24px;'>허가 후 제조방법 변경사항 선택</h2>",
+        "<h2 style='font-size:27px;'>허가 후 제조방법 변경사항 선택</h2>",
         unsafe_allow_html=True,
     )
     st.markdown(
@@ -778,7 +779,7 @@ def go_to_step7():
 
 if st.session_state.step == 6:
     st.markdown(
-        "<h2 style='font-size:24px;'>허가 후 제조방법 변경사항의 충족조건 선택</h2>",
+        "<h2 style='font-size:26px;'>허가 후 제조방법 변경사항의 충족조건 선택</h2>",
         unsafe_allow_html=True,
     )
     st.markdown(
@@ -1533,7 +1534,7 @@ for idx, row in enumerate(STEP7_ROWS):
 if st.session_state.step == 7:
     current_key = st.session_state.step6_targets[st.session_state.step7_page]
     st.markdown(
-        "<h2 style='font-size:24px;'>제조방법 변경에 따른 필요서류 및 보고유형</h2>",
+        "<h2 style='font-size:26px;'>제조방법 변경에 따른 필요서류 및 보고유형</h2>",
         unsafe_allow_html=True,
     )
     
@@ -1611,7 +1612,7 @@ if st.session_state.step == 7:
             )
 
             box_html = f"""
-            <div style='background-color:#FFFFF0;padding:10px;margin-bottom:20px;'>
+            <div style='background-color:#fffcf2;padding:10px;margin-bottom:20px;'>
                 <p style='font-weight:bold;font-size:15pt;margin:0;'>{first_line}</p>
                 <p style='font-weight:bold;font-size:13pt;margin:0;'>{second_line}</p>
                 <br>
@@ -1648,6 +1649,7 @@ if st.session_state.step == 7:
 # ===== Step8: [붙임] 신청양식「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」 DOCX 생성 =====
 
 def set_cell_font(cell, font_size=11, bold=False):
+    cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER    
     for paragraph in cell.paragraphs:
         if not paragraph.runs:
             paragraph.add_run("")
@@ -1659,21 +1661,8 @@ def set_cell_font(cell, font_size=11, bold=False):
         paragraph.paragraph_format.line_spacing = 1.4
 
 def apply_document_font(doc, font_name="Noto Serif KR"):
-    """Ensure every run in the document uses the specified font."""
-    for paragraph in doc.paragraphs:
-        for run in paragraph.runs:
-            run.font.name = font_name
-            run._element.rPr.rFonts.set(qn("w:eastAsia"), font_name)
-    for table in doc.tables:
-        for row in table.rows:
-            for cell in row.cells:
-                for paragraph in cell.paragraphs:
-                    for run in paragraph.runs:
-                        run.font.name = font_name
-                        run._element.rPr.rFonts.set(qn("w:eastAsia"), font_name)
+    """Ensure every run in the document uses the specified font and cells are formatted."""
 
-def apply_document_font(doc, font_name="Noto Serif KR"):
-    """Ensure every run in the document uses the specified font."""
     for paragraph in doc.paragraphs:
         for run in paragraph.runs:
             run.font.name = font_name
@@ -1681,10 +1670,15 @@ def apply_document_font(doc, font_name="Noto Serif KR"):
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
+                if not cell.paragraphs:
+                    cell.add_paragraph("")
                 for paragraph in cell.paragraphs:
+                    if not paragraph.runs:
+                        paragraph.add_run("")
                     for run in paragraph.runs:
                         run.font.name = font_name
                         run._element.rPr.rFonts.set(qn("w:eastAsia"), font_name)
+                cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
 
 def set_cell_text_with_breaks(cell, text, font_size=None, bold=False, font_name="Noto Serif KR"):
     """Set cell text with line breaks preserved and optional font settings."""
@@ -1719,6 +1713,12 @@ def delete_row(table, row_idx):
     tr = table.rows[row_idx]._tr
     tbl.remove(tr)
 
+def adjust_row_heights(table, factor=0.8):
+    """Reduce table row heights by the given factor."""
+    for row in table.rows:
+        if row.height:
+            row.height = Pt(row.height.pt * factor)
+
 def requirement_symbol(title_key, req_key, selections):
     state = selections.get(f"{title_key}_req_{req_key}", "")
     if state == "충족":
@@ -1737,7 +1737,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     p = doc.paragraphs[0]
     p.clear()
     run = p.add_run(title)
-    run.font.size = Pt(13)
+    run.font.size = Pt(12)
     run.font.bold = True
     run.font.name = "Noto Serif KR"
     run._element.rPr.rFonts.set(qn("w:eastAsia"), "Noto Serif KR")
@@ -1821,6 +1821,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     # populates the entire merged cell. Avoid resetting cells 1-3 which would
     # overwrite the merged content and remove the text.
     set_cell_text_with_breaks(sub_row.cells[4], "조건 충족 여부\n(O, X 선택)", font_size=12, bold=True)
+    set_cell_font(sub_row.cells[4], 12, bold=True)
     sub_row.cells[4].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     # 4. 충족조건 내용 채우기 (rows 6-10 default in template)
@@ -1886,6 +1887,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         for i in range(base_doc_rows - max_docs):
             delete_row(table, doc_start + base_doc_rows + extra_docs - 1 - i)
 
+    adjust_row_heights(table, 0.8)
     apply_document_font(doc, "Noto Serif KR")
     doc.save(file_path)
     return file_path
