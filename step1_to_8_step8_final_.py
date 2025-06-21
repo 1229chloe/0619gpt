@@ -67,6 +67,13 @@ def render_cover_page():
         unsafe_allow_html=True,
     )
 
+def render_footer():
+    """Render the copyright notice at the bottom of pages."""
+    st.markdown(
+        "<div style='text-align:center; font-size:10pt;'>ⓒ 2025 Chloe Kim. All rights reserved.<br>본 시스템의 자동화 로직, UI 구성, 데이터 분류 구조는 Chloe Kim의 창작물로 보호되며,  무단 복제 및 2차 사용을 금합니다.</div>",
+        unsafe_allow_html=True,
+    )
+
 
 # ===== 초기 상태 정의 =====
 if "step" not in st.session_state:
@@ -84,6 +91,10 @@ if "step4_selections" not in st.session_state:
 
 if "step5_targets" not in st.session_state:
     st.session_state.step5_targets = []
+if "step9_dl1" not in st.session_state:
+    st.session_state.step9_dl1 = False
+if "step9_dl2" not in st.session_state:
+    st.session_state.step9_dl2 = False
 
 if st.session_state.step == 0:
     render_cover_page()
@@ -101,14 +112,25 @@ if st.session_state.step == 1:
     st.session_state.step1_answer = st.radio("➤ 답변을 선택하세요.", ["예", "아니오"], key="step1_radio")
 
     if st.session_state.step1_answer == "예":
-        st.success("""💡CTD 작성대상 완제의약품 해당합니다.
-(근거 : 「의약품의 품목허가·신고·심사 규정」제6조(국제공통기술문서 작성) 제1항, 제3조의2(의약품의 허가ㆍ신고의 변경 처리) 제6항)""")
+        st.success(
+            textwrap.dedent(
+                """\
+💡CTD 작성대상 완제의약품 해당합니다.  
+    (근거 : 「의약품의 품목허가·신고·심사 규정」제6조(국제공통기술문서 작성) 제1항,
+    제3조의2(의약품의 허가ㆍ신고의 변경 처리) 제6항)"""
+            )
+        )
         st.button("다음단계로", on_click=go_to_step2)
 
     elif st.session_state.step1_answer == "아니오":
-        st.warning("""⚠️CTD 작성대상 완제의약품 해당여부를 확인하고, 작성 대상에 해당하는 경우 먼저, CTD 제3부 품질평가 자료 중
-3.2.S.2, 3.2.S.3 및 3.2.P.2, 3.2.P.3, 3.2.P.4, 3.2.P.7를 제출하여 제조방법 자료로서 심사 받으시기 바랍니다.
-(근거 : 「의약품의 품목허가·신고·심사 규정」제6조(국제공통기술문서 작성) 제1항, 제3조의2(의약품의 허가ㆍ신고의 변경 처리) 제6항)""")
+        st.warning(
+            textwrap.dedent(
+                """⚠️CTD 작성대상 완제의약품 해당여부를 확인하고, 작성 대상에 해당하는 경우 먼저, CTD 제3부 품질평가 자료 중
+    3.2.S.2, 3.2.S.3 및 3.2.P.2, 3.2.P.3, 3.2.P.4, 3.2.P.7를 제출하여 제조방법 자료로서 심사 받으시기 바랍니다.
+    (근거 : 「의약품의 품목허가·신고·심사 규정」제6조(국제공통기술문서 작성) 제1항,
+    제3조의2(의약품의 허가ㆍ신고의 변경 처리) 제6항)"""
+            )
+        )
 
 # ===== Step2 함수 및 화면 =====
 def go_to_step3():
@@ -122,16 +144,26 @@ if st.session_state.step == 2:
     st.session_state.step2_answer = st.radio("➤ 답변을 선택하세요.", ["예", "아니오"], key="step2_radio")
 
     if st.session_state.step2_answer == "예":
-        st.success("""💡 「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」의 적용 대상 항목의 변경에 해당합니다.
-(근거 : 「의약품의 품목허가·신고·심사 규정」[별표 19])""")
+        st.success(
+            textwrap.dedent(
+                """\
+💡 「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」의 적용 대상 항목의 변경에 해당합니다.
+    (근거 : 「의약품의 품목허가·신고·심사 규정」[별표 19])"""
+            )
+        )
         st.button("다음단계로", on_click=go_to_step3)
 
     elif st.session_state.step2_answer == "아니오":
-        st.warning("""⚠️ 제조에 관한 항목은 CTD 제3부 품질평가 자료 중
-3.2.S.2, 3.2.S.3 및 3.2.P.2, 3.2.P.3, 3.2.P.4, 3.2.P.7에 해당하며
-「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」는 해당 항목에 대한 변경에 대해 안내하고 있으므로,
-가이드라인 적용 대상에 해당하지 않습니다.
-(근거 : 「의약품의 품목허가·신고·심사 규정」[별표 19])""")
+        st.warning(
+            textwrap.dedent(
+                """\
+⚠️ 제조에 관한 항목은 CTD 제3부 품질평가 자료 중
+    3.2.S.2, 3.2.S.3 및 3.2.P.2, 3.2.P.3, 3.2.P.4, 3.2.P.7에 해당하며
+    「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」는 해당 항목에 대한 변경에 대해 안내하고 있으므로,
+    가이드라인 적용 대상에 해당하지 않습니다.
+    (근거 : 「의약품의 품목허가·신고·심사 규정」[별표 19])"""
+            )
+        )
 
 # ===== Step3 함수 및 화면 =====
 def go_to_step4():
@@ -145,13 +177,23 @@ if st.session_state.step == 3:
     st.session_state.step3_answer = st.radio("➤ 답변을 선택하세요.", ["예", "아니오"], key="step3_radio")
 
     if st.session_state.step3_answer == "예":
-        st.success("""💡 「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」에 따라 변경수준을 확인할 수 있습니다.  
-(근거 : 「의약품의 품목허가·신고·심사 규정」[별표 19])""")
+        st.success(
+            textwrap.dedent(
+                """\
+💡 「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」에 따라 변경수준을 확인할 수 있습니다.
+    (근거 : 「의약품의 품목허가·신고·심사 규정」[별표 19])"""
+            )
+        )
         st.button("다음단계로", on_click=go_to_step4)
 
     elif st.session_state.step3_answer == "아니오":
-        st.warning("""⚠️ 먼저, CTD 제3부 품질평가 자료 중 3.2.S.2, 3.2.S.3 및 3.2.P.2, 3.2.P.3, 3.2.P.4, 3.2.P.7를 제출하여 제조방법 자료로서 심사 받으시기 바랍니다.  
-(근거 : 「의약품의 품목허가·신고·심사 규정」[별표 19])""")
+        st.warning(
+            textwrap.dedent(
+                """\
+⚠️ 먼저, CTD 제3부 품질평가 자료 중 3.2.S.2, 3.2.S.3 및 3.2.P.2, 3.2.P.3, 3.2.P.4, 3.2.P.7를 제출하여 제조방법 자료로서 심사 받으시기 바랍니다.
+    (근거 : 「의약품의 품목허가·신고·심사 규정」[별표 19])"""
+            )
+        )
 
 # Step 4 상태 초기화
 if "step4_selections" not in st.session_state:
@@ -198,7 +240,7 @@ def go_back_to_step3():
 
 # Step 4 실행
 if st.session_state.step == 4:
-    indent = "&nbsp;" * 4
+    indent = "&nbsp;" * 2
     st.markdown(
         "<h2 style='font-size:26px; text-align:center; background-color:#FAF3DB; padding:4px;'>가이드라인에 명시된 변경사항의 CTD 항목 선택</h2>",
         unsafe_allow_html=True,
@@ -435,7 +477,7 @@ if st.session_state.step == 5:
 
     targets = st.session_state.step5_targets
     if not targets:
-        st.warning("Step4에서 선택된 항목이 없습니다.")
+        st.warning("이전 단계에서 선택된 항목이 없습니다.")
     else:
         current_code = targets[st.session_state.step5_page]
         section = step5_items.get(current_code)
@@ -824,6 +866,7 @@ def go_next_step7_page():
         st.session_state.step7_page += 1
 
 def go_to_step8():
+    st.session_state.step8_page = 0
     st.session_state.step = 8
 
 def go_back_to_step5():
@@ -868,8 +911,9 @@ if st.session_state.step == 6:
     )
 
     targets = st.session_state.step6_targets
+    total_pages = len(targets)
     if not targets:
-        st.warning("Step5에서 선택된 항목이 없습니다.")
+        st.warning("이전 단계에서 선택된 항목이 없습니다.")
     else:
         current_key = targets[st.session_state.step6_page]
         block = step6_items.get(current_key)
@@ -960,24 +1004,25 @@ if st.session_state.step == 6:
         else:
             st.warning("해당 항목 정보를 찾을 수 없습니다.")
 
-        total_pages = len(st.session_state.step6_targets)
-        st.markdown(
-            f"<h6 style='text-align:center'>{st.session_state.step6_page + 1} / {total_pages}</h6>",
-            unsafe_allow_html=True,
-        )
+    # 페이지 번호 표시 및 하단 네비게이션 영역은 targets 유무와 상관없이 노출
+    st.markdown(
+        f"<h6 style='text-align:center'>{(st.session_state.step6_page + 1) if targets else 0} / {total_pages}</h6>",
+        unsafe_allow_html=True,
+    )
 
-        # 하단 버튼 영역
-        col1, col2 = st.columns(2)
-        with col1:
-            st.button(
-                "이전단계로",
-                on_click=go_back_to_step5 if st.session_state.step6_page == 0 else go_to_prev_step6_page
-            )
-        with col2:
-            if st.session_state.step6_page == len(st.session_state.step6_targets) - 1:
-                st.button("결과 확인하기", on_click=go_to_step7)
-            else:
-                st.button("다음항목 선택하기", on_click=go_to_next_step6_page)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.button(
+            "이전단계로",
+            on_click=go_back_to_step5 if st.session_state.step6_page == 0 else go_to_prev_step6_page,
+        )
+    with col2:
+        if targets and st.session_state.step6_page == len(targets) - 1:
+            st.button("결과 확인하기", on_click=go_to_step7)
+        elif targets:
+            st.button("다음항목 선택하기", on_click=go_to_next_step6_page)
+        else:
+            st.button("다음항목 선택하기", disabled=True)
 
 # ===== Step7 상수 정의 =====
 STEP7_ROWS = [
@@ -1720,6 +1765,7 @@ def set_cell_font(cell, font_size=11, bold=False):
             run.font.name = "Noto Serif KR"
             run._element.rPr.rFonts.set(qn("w:eastAsia"), "Noto Serif KR")
         paragraph.paragraph_format.line_spacing = 1.4
+        paragraph.paragraph_format.space_after = Pt(0)        
 
 def apply_document_font(doc, font_name="Noto Serif KR"):
     """Ensure every run in the document uses the specified font and cells are formatted."""
@@ -1746,6 +1792,8 @@ def set_cell_text_with_breaks(cell, text, font_size=None, bold=False, font_name=
     cell.text = ""
     p = cell.paragraphs[0]
     p.text = ""
+    p.paragraph_format.space_after = Pt(0)
+    p.paragraph_format.line_spacing = 1.4
     lines = text.split("\n")
     for i, line in enumerate(lines):
         if i > 0:
@@ -1809,7 +1857,7 @@ def create_application_docx(
     run = p.add_run(title)
     run.font.size = Pt(14)
     run.font.bold = True
-    p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
     run.font.name = "Noto Serif KR"
     run._element.rPr.rFonts.set(qn("w:eastAsia"), "Noto Serif KR")
 
@@ -1964,15 +2012,18 @@ def create_application_docx(
     sig_para = doc.add_paragraph("               책임자 성명                     서명    ")
     sig_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
     sig_para.paragraph_format.line_spacing = 1.4
+    sig_para.paragraph_format.space_after = Pt(0)
     for run in sig_para.runs:
         run.font.size = Pt(14)
 
     # Insert two blank paragraphs before the page indicator
     for _ in range(2):
-        doc.add_paragraph("")
+        blank_para = doc.add_paragraph("")
+        blank_para.paragraph_format.space_after = Pt(0)
 
     # Add page indicator below the signature line
     page_para = doc.add_paragraph(f"{page_index + 1} / {total_pages}")
+    page_para.paragraph_format.space_after = Pt(0)
     page_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
     apply_document_font(doc, "Noto Serif KR")
     doc.save(file_path)
@@ -2004,6 +2055,7 @@ if st.session_state.step == 8:
     if not page_list:
         st.error("결과가 없어 Step7로 돌아갑니다.")
         st.session_state.step = 7
+        render_footer()
         st.stop()
 
     if "step8_page" not in st.session_state:
@@ -2037,31 +2089,34 @@ if st.session_state.step == 8:
             output2_text_list = [line.strip() for line in result.get("output_2_text", "").split("\n") if line.strip()]
             if output2_text_list and "필요서류" in output2_text_list[0]:
                 output2_text_list = output2_text_list[1:]
-            with NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
-                file_path = tmp.name
-                create_application_docx(
-                    current_key,
-                    result,
-                    requirements,
-                    selections,
-                    output2_text_list,
-                    file_path,
-                )
+            with st.spinner("⚠️ 다운로드용 파일 생성 중입니다. 잠시 기다려주세요"):
+                with NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
+                    file_path = tmp.name
+                    create_application_docx(
+                        current_key,
+                        result,
+                        requirements,
+                        selections,
+                        output2_text_list,
+                        file_path,
+                    )
 
-            with open(file_path, "rb") as f:
-                file_bytes = f.read()
+                with open(file_path, "rb") as f:
+                    file_bytes = f.read()
 
-            col_left, _ = st.columns(2)
+            col_left, col_right = st.columns([1, 4])
             with col_left:
                 st.download_button(
                     "📄 파일 다운로드",
                     file_bytes,
                     file_name=f"신청서_{current_key}_{current_idx}.docx",
                 )
+            with col_right:
+                st.success("💡 다운로드용 파일 생성이 완료되었습니다.")
             os.remove(file_path)
 
             st.markdown(
-                "<h5 style='text-align:center; font-size:20px;'>[붙임] CTD 제조방법 반영 후 변경허가 신청 양식</h5>",
+                "<h5 style='text-align:left; font-size:20px;'>[붙임] CTD 제조방법 반영 후 변경허가 신청 양식</h5>",
                 unsafe_allow_html=True,
             )
 
@@ -2159,7 +2214,7 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
         unsafe_allow_html=True,
     )
 
-    nav_left, nav_right = st.columns(2)
+    nav_left, _, nav_right = st.columns([1, 4, 1])
     with nav_left:
         if st.button("⬅ 이전"):
             if st.session_state.step8_page == 0:
@@ -2172,3 +2227,69 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
         if page < total_pages - 1:
             if st.button("다음 ➡"):
                 st.session_state.step8_page += 1
+        else:
+            if st.button("관련 자료 확인하기"):
+                st.session_state.step = 9
+                if hasattr(st, "rerun"):
+                    st.rerun()
+                else:
+                    st.experimental_rerun()
+
+if st.session_state.step == 9:
+    st.markdown(
+        "<h2 style='font-size:24px; text-align:center; background-color:#FAF3DB; padding:4px;'>가이드라인 및 질의응답집</h2>",
+        unsafe_allow_html=True,
+    )
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
+
+    guideline_path = os.path.join(
+        BASE_DIR, "의약품 허가 후 제조방법 변경관리 가이드라인(민원인안내서).pdf"
+    )
+    with open(guideline_path, "rb") as f:
+        guideline_bytes = f.read()
+
+    def mark_dl1():
+        st.session_state.step9_dl1 = True
+
+    label1 = (
+        ("📂" if st.session_state.step9_dl1 else "📁")
+        + " 의약품 허가 후 제조방법 변경관리 가이드라인(민원인안내서) 다운로드 하기"
+    )
+    st.download_button(
+        label1,
+        guideline_bytes,
+        file_name="의약품 허가 후 제조방법 변경관리 가이드라인(민원인안내서).pdf",
+        key="dl1",
+        on_click=mark_dl1,
+    )
+    st.markdown("<br><br>", unsafe_allow_html=True)
+
+    qna_path = os.path.join(
+        BASE_DIR, "의약품 허가 후 제조방법 변경관리 질의응답집(민원인안내서).pdf"
+    )
+    with open(qna_path, "rb") as f:
+        qna_bytes = f.read()
+
+    def mark_dl2():
+        st.session_state.step9_dl2 = True
+
+    label2 = (
+        ("📂" if st.session_state.step9_dl2 else "📁")
+        + " 의약품 허가 후 제조방법 변경관리 질의응답집(민원인안내서) 다운로드 하기"
+    )
+    st.download_button(
+        label2,
+        qna_bytes,
+        file_name="의약품 허가 후 제조방법 변경관리 질의응답집(민원인안내서).pdf",
+        key="dl2",
+        on_click=mark_dl2,
+    )
+    st.markdown("<br><br><br><br>", unsafe_allow_html=True)
+
+    back_col, _ = st.columns(2)
+    with back_col:
+        if st.button("⬅ 이전"):
+            st.session_state.step = 8
+
+if st.session_state.step > 0:
+    render_footer()
